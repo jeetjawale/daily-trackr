@@ -26,55 +26,95 @@
   <div class="modal-overlay hidden" id="sync-modal">
     <div class="modal">
       <div class="modal-head">
+        <button class="auth-back-btn hidden" id="auth-back-btn" aria-label="Back">←</button>
         <span class="modal-title">☁️ Sync</span>
         <button class="modal-close" id="modal-close-btn">×</button>
       </div>
       <div class="modal-body">
+
         <div id="sync-status-display"></div>
+        <p class="auth-msg" id="auth-msg"></p>
 
-        <!-- Signed-in state -->
-        <div id="auth-signout-area" class="hidden">
-          <p class="auth-user-email" id="auth-signout-email"></p>
-          <p class="field-hint" style="margin-bottom:14px">Your data syncs automatically on every save.</p>
-          <button class="modal-btn secondary" id="signout-btn">Sign Out</button>
-          <button class="modal-btn danger" id="delete-btn">Delete Account</button>
+        <!-- ── Sign In ── -->
+        <div id="auth-view-signin">
+          <div class="modal-section">
+            <label class="field-label" for="si-email">Email</label>
+            <input class="field-inp" id="si-email" type="email" placeholder="you@example.com" autocomplete="email" />
+          </div>
+          <div class="modal-section">
+            <label class="field-label" for="si-pass">Password</label>
+            <input class="field-inp" id="si-pass" type="password" placeholder="Your password" autocomplete="current-password" />
+          </div>
+          <button class="modal-btn" id="si-submit">Sign In</button>
+          <div class="auth-links">
+            <button class="auth-link" id="si-to-forgot">Forgot password?</button>
+            <button class="auth-link" id="si-to-register">Create account</button>
+          </div>
         </div>
 
-        <!-- Sign-in / register form -->
-        <div id="auth-form-area">
-          <div class="auth-tabs">
-            <button class="auth-tab active" id="auth-tab-password">Password</button>
-            <button class="auth-tab"        id="auth-tab-magic">Magic Link</button>
+        <!-- ── Register ── -->
+        <div id="auth-view-register" class="hidden">
+          <div class="modal-section">
+            <label class="field-label" for="reg-email">Email</label>
+            <input class="field-inp" id="reg-email" type="email" placeholder="you@example.com" autocomplete="email" />
           </div>
-
-          <!-- Password form -->
-          <div id="auth-password-form">
-            <div class="modal-section">
-              <label class="field-label" for="auth-email-pw">Email</label>
-              <input class="field-inp" id="auth-email-pw" type="email" placeholder="you@example.com" autocomplete="email" />
-            </div>
-            <div class="modal-section">
-              <label class="field-label" for="auth-password">Password</label>
-              <input class="field-inp" id="auth-password" type="password" placeholder="Min 6 characters" autocomplete="current-password" />
-            </div>
-            <div class="auth-btns">
-              <button class="modal-btn" id="signin-btn">Sign In</button>
-              <button class="modal-btn secondary" id="create-btn">Create Account</button>
-            </div>
+          <div class="modal-section">
+            <label class="field-label" for="reg-pass">Password</label>
+            <input class="field-inp" id="reg-pass" type="password" placeholder="Min 6 characters" autocomplete="new-password" />
           </div>
-
-          <!-- Magic link form -->
-          <div id="auth-magic-form" class="hidden">
-            <div class="modal-section">
-              <label class="field-label" for="auth-email-magic">Email</label>
-              <input class="field-inp" id="auth-email-magic" type="email" placeholder="you@example.com" autocomplete="email" />
-              <p class="field-hint">We'll send a one-click sign-in link — no password needed.</p>
-            </div>
-            <button class="modal-btn" id="magic-btn">Send Magic Link</button>
+          <div class="modal-section">
+            <label class="field-label" for="reg-pass-confirm">Confirm password</label>
+            <input class="field-inp" id="reg-pass-confirm" type="password" placeholder="Repeat password" autocomplete="new-password" />
           </div>
-
-          <p class="auth-msg" id="auth-msg"></p>
+          <button class="modal-btn" id="reg-submit">Create Account</button>
         </div>
+
+        <!-- ── Forgot password ── -->
+        <div id="auth-view-forgot" class="hidden">
+          <p class="auth-desc">Enter your email and we'll send you a reset link.</p>
+          <div class="modal-section">
+            <label class="field-label" for="fp-email">Email</label>
+            <input class="field-inp" id="fp-email" type="email" placeholder="you@example.com" autocomplete="email" />
+          </div>
+          <button class="modal-btn" id="fp-submit">Send Reset Email</button>
+        </div>
+
+        <!-- ── Account (signed in) ── -->
+        <div id="auth-view-account" class="hidden">
+          <p class="account-email" id="account-email"></p>
+          <p class="field-hint" style="margin-bottom:16px">Your data syncs automatically on every save.</p>
+          <button class="modal-btn secondary" id="acc-change-pass">Change Password</button>
+          <button class="modal-btn secondary" id="acc-signout" style="margin-top:8px">Sign Out</button>
+          <button class="modal-btn danger"    id="acc-delete"   style="margin-top:8px">Delete Account</button>
+        </div>
+
+        <!-- ── Change password ── -->
+        <div id="auth-view-change-pass" class="hidden">
+          <div class="modal-section">
+            <label class="field-label" for="cp-current">Current password</label>
+            <input class="field-inp" id="cp-current" type="password" placeholder="Current password" autocomplete="current-password" />
+          </div>
+          <div class="modal-section">
+            <label class="field-label" for="cp-new">New password</label>
+            <input class="field-inp" id="cp-new" type="password" placeholder="Min 6 characters" autocomplete="new-password" />
+          </div>
+          <div class="modal-section">
+            <label class="field-label" for="cp-confirm">Confirm new password</label>
+            <input class="field-inp" id="cp-confirm" type="password" placeholder="Repeat new password" autocomplete="new-password" />
+          </div>
+          <button class="modal-btn" id="cp-submit">Update Password</button>
+        </div>
+
+        <!-- ── Delete account ── -->
+        <div id="auth-view-delete" class="hidden">
+          <p class="auth-desc danger-desc">This will permanently delete your account and all cloud data. This cannot be undone.</p>
+          <div class="modal-section">
+            <label class="field-label" for="del-pass">Enter your password to confirm</label>
+            <input class="field-inp" id="del-pass" type="password" placeholder="Your password" autocomplete="current-password" />
+          </div>
+          <button class="modal-btn danger" id="del-submit">Permanently Delete Account</button>
+        </div>
+
       </div>
     </div>
   </div>
