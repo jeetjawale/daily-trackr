@@ -128,14 +128,23 @@
 
     <!-- Navigation bar -->
     <nav class="nav">
-      <div class="nav-left">
-        <div class="nav-day-row">
+      <!-- Row 1: date + time on left, icon buttons on right -->
+      <div class="nav-row1">
+        <div class="nav-date-group">
           <span class="nav-day" id="nav-day"></span>
           <span class="today-pill" id="today-pill" hidden>today</span>
+          <span class="nav-clock" id="nav-clock"></span>
         </div>
-        <span class="nav-clock" id="nav-clock"></span>
+        <div class="nav-icons">
+          <button class="btn btn-sq hidden" id="install-btn" title="Install app">⬇️</button>
+          <button class="btn btn-sq" id="sync-btn"  title="Sync settings">☁️</button>
+          <button class="btn btn-sq" id="dark-btn"  title="Toggle dark mode">☀️</button>
+          <button class="btn btn-sq" id="prev-btn"  aria-label="Previous day">←</button>
+          <button class="btn btn-sq" id="next-btn"  aria-label="Next day">→</button>
+        </div>
       </div>
-      <div class="nav-right">
+      <!-- Row 2: view toggle on left, copy yesterday on right -->
+      <div class="nav-row2">
         <div class="view-toggle" role="group" aria-label="View">
           <button class="vt-btn active" id="vt-day"    data-view="day">Day</button>
           <button class="vt-btn"        id="vt-week"   data-view="week">Week</button>
@@ -145,10 +154,6 @@
           <span class="copy-txt">Copy yesterday</span>
           <span class="copy-ico" aria-hidden="true">⟳</span>
         </button>
-        <button class="btn btn-sq" id="sync-btn"  title="Sync settings">☁️</button>
-        <button class="btn btn-sq" id="dark-btn"  title="Toggle dark mode">☀️</button>
-        <button class="btn btn-sq" id="prev-btn"  aria-label="Previous day">←</button>
-        <button class="btn btn-sq" id="next-btn"  aria-label="Next day">→</button>
       </div>
     </nav>
 
