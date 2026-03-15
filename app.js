@@ -878,8 +878,17 @@ async function changePassword() {
 
 // ── Sign out ──
 async function signOut() {
-  if (!confirm('Sign out? Your local data stays intact.')) return;
+  if (!confirm('Sign out?')) return;
   await fbAuth.signOut();
+  closeSyncModal();
+}
+
+function clearLocalData() {
+  if (!confirm('Clear all local data?\n\nThis removes everything stored on this device. Your cloud data (if signed in) is unaffected and will re-sync on next sign in.\n\nThis cannot be undone.')) return;
+  localStorage.removeItem(STORAGE_KEY);
+  db = {}; habits = structuredClone(DEFAULT_HABITS); pinnedTasks = [];
+  nextId = 100; reminders = { morningOn: false, morningTime: '08:00', eveningOn: false, eveningTime: '21:00' };
+  render();
   closeSyncModal();
 }
 
@@ -1030,6 +1039,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('si-pass').addEventListener('keydown',  e => { if (e.key === 'Enter') signIn(); });
   document.getElementById('si-to-register').addEventListener('click', () => showAuthView('register'));
   document.getElementById('si-to-forgot').addEventListener('click',   () => showAuthView('forgot'));
+  document.getElementById('si-clear-local').addEventListener('click', clearLocalData);
 
   // Register
   document.getElementById('reg-submit').addEventListener('click', register);
@@ -1042,6 +1052,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Account
   document.getElementById('acc-change-pass').addEventListener('click', () => showAuthView('change-pass'));
   document.getElementById('acc-signout').addEventListener('click', signOut);
+  document.getElementById('acc-clear-local').addEventListener('click', clearLocalData);
   document.getElementById('acc-delete').addEventListener('click', () => showAuthView('delete'));
 
   // Change password
