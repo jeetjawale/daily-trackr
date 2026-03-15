@@ -44,6 +44,7 @@ let fbUser = null;
 let scoreChart = null;
 let sleepChart = null;
 let habitChart = null;
+let moodChart  = null;
 
 // Reminder timers
 let remTimers = [];
@@ -123,6 +124,7 @@ function blankDay() {
     pinnedDone: {},
     meals: { breakfast: '', lunch: '', dinner: '', snacks: '' },
     habits: {}, notes: '', win: '', tmr: '',
+    mood: null,
   };
 }
 
@@ -289,6 +291,7 @@ function render() {
   renderTasks();
   renderMeals();
   renderHabits();
+  renderMood();
   updateScoreStrip();
   wireInputs();
 }
@@ -701,6 +704,27 @@ function renderTrends() {
       }
     },
   });
+
+  // Mood chart
+  const moodData   = days.map(d => db[d]?.mood ?? null);
+  const moodColor  = isDark ? 'rgba(251,191,36,.7)' : 'rgba(217,119,6,.6)';
+  const moodAlpha  = isDark ? 'rgba(251,191,36,.07)' : 'rgba(217,119,6,.05)';
+  if (moodChart) { moodChart.destroy(); moodChart = null; }
+  moodChart = new Chart(document.getElementById('mood-chart'), {
+    type: 'line',
+    data: { labels, datasets: [{ data: moodData, borderColor: moodColor, backgroundColor: moodAlpha,
+      borderWidth: 2, pointRadius: 3, tension: 0.35, fill: true, spanGaps: true }] },
+    options: { responsive: true,
+      plugins: { legend: { display: false },
+        tooltip: { callbacks: { label: c => MOODS[c.raw - 1] + ' ' + MOOD_LABELS[c.raw - 1] } }
+      },
+      scales: {
+        x: { grid: { color: gridColor }, ticks: { maxTicksLimit: 7 } },
+        y: { min: 1, max: 5, grid: { color: gridColor },
+          ticks: { stepSize: 1, callback: v => MOODS[v - 1] ?? '' } },
+      }
+    },
+  });
 }
 
 
@@ -920,6 +944,86 @@ async function deleteAccount() {
 }
 
 
+// ─── Mood tracker ──────────────────────────────────────────
+
+const MOODS = ['😞', '😐', '🙂', '😄', '🤩'];
+const MOOD_LABELS = ['Rough', 'Okay', 'Good', 'Great', 'Amazing'];
+
+function renderMood() {
+  const d    = getDay(currentDay);
+  const mood = d.mood ?? null;
+  document.getElementById('mood-btns').innerHTML = MOODS.map((emoji, i) => `
+    <button class="mood-btn ${mood === i + 1 ? 'selected' : ''}" data-mood="${i + 1}"
+      title="${MOOD_LABELS[i]}" aria-label="${MOOD_LABELS[i]}">
+      ${emoji}
+    </button>`).join('');
+  document.querySelectorAll('.mood-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const val = +btn.dataset.mood;
+      // Toggle off if clicking same mood
+      getDay(currentDay).mood = (getDay(currentDay).mood === val) ? null : val;
+      touch(); renderMood();
+    });
+  });
+}
+
+
+// ─── Export / Import ───────────────────────────────────────
+
+function exportData() {
+  const payload = {
+    version:    2,
+    exported_at: new Date().toISOString(),
+    db, habits, pinnedTasks, nextId, reminders,
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = 'daily-tracker-' + todayStr() + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importData() {
+  const input = document.createElement('input');
+  input.type  = 'file';
+  input.accept = '.json,application/json';
+  input.onchange = e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const d = JSON.parse(ev.target.result);
+        if (!d.db || !d.habits) {
+          alert('Invalid file — this doesn\'t look like a Daily Tracker export.');
+          return;
+        }
+        if (!confirm(
+          'Import data?\n\nThis will REPLACE all your current local data with the imported file.\n\n' +
+          'Your cloud data is unaffected unless you save after importing.\n\nContinue?'
+        )) return;
+
+        db          = d.db          ?? {};
+        habits      = d.habits      ?? structuredClone(DEFAULT_HABITS);
+        pinnedTasks = d.pinnedTasks ?? [];
+        nextId      = d.nextId      ?? 100;
+        reminders   = d.reminders   ?? reminders;
+        saveToStorage();
+        render();
+        closeSyncModal();
+        alert('✓ Data imported successfully.');
+      } catch (err) {
+        alert('Failed to read file — make sure it\'s a valid JSON export.');
+      }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
+
 // ─── Navigation ────────────────────────────────────────────
 
 function collectCurrentDay() {
@@ -997,6 +1101,12 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('copy-btn').addEventListener('click', copyYesterday);
   document.getElementById('dark-btn').addEventListener('click', toggleDark);
   document.getElementById('sync-btn').addEventListener('click', openSyncModal);
+  document.getElementById('install-btn').addEventListener('click', () => {
+    if (deferredInstallPrompt) {
+      deferredInstallPrompt.prompt();
+      deferredInstallPrompt.userChoice.then(() => { deferredInstallPrompt = null; });
+    }
+  });
 
   // View toggle
   document.querySelectorAll('.vt-btn').forEach(btn => {
@@ -1054,6 +1164,12 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('acc-signout').addEventListener('click', signOut);
   document.getElementById('acc-clear-local').addEventListener('click', clearLocalData);
   document.getElementById('acc-delete').addEventListener('click', () => showAuthView('delete'));
+  document.getElementById('acc-export').addEventListener('click', exportData);
+  document.getElementById('acc-import').addEventListener('click', importData);
+
+  // Export/import for signed-out users too
+  document.getElementById('si-export').addEventListener('click', exportData);
+  document.getElementById('si-import').addEventListener('click', importData);
 
   // Change password
   document.getElementById('cp-submit').addEventListener('click', changePassword);
@@ -1104,3 +1220,21 @@ if (initFirebase()) {
 updateSyncStatus();
 
 if (Notification.permission === 'granted') scheduleReminders();
+
+// ─── PWA ───────────────────────────────────────────────────
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(e => console.warn('SW registration failed:', e));
+}
+
+// Show install prompt when browser fires beforeinstallprompt
+let deferredInstallPrompt = null;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  document.getElementById('install-btn').classList.remove('hidden');
+});
+window.addEventListener('appinstalled', () => {
+  document.getElementById('install-btn').classList.add('hidden');
+  deferredInstallPrompt = null;
+});
