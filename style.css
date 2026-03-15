@@ -447,6 +447,15 @@ body {
 
 .modal-btn.secondary:hover { border-color: var(--text); color: var(--text); }
 
+.modal-btn.danger {
+  background: var(--surface);
+  border: 1.5px solid #fca5a5;
+  color: #dc2626;
+  margin-top: 8px;
+}
+
+.modal-btn.danger:hover { background: #fef2f2; border-color: #dc2626; }
+
 .sync-status-badge {
   display: flex;
   align-items: center;
@@ -1786,23 +1795,6 @@ body {
 
 .auth-msg.warn { color: #d97706; }
 .auth-msg.ok   { color: var(--green); }
-
-.auth-forgot {
-  display: block;
-  margin-top: 10px;
-  background: none;
-  border: none;
-  color: var(--text3);
-  font-size: var(--f-xs);
-  font-family: 'DM Sans', sans-serif;
-  cursor: pointer;
-  padding: 0;
-  text-decoration: underline;
-  text-underline-offset: 2px;
-  transition: color 0.15s;
-}
-
-.auth-forgot:hover { color: var(--text2); }
 
 .auth-user-email {
   font-family: 'DM Mono', monospace;
