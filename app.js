@@ -19,6 +19,10 @@ const EMOJI_OPTIONS = [
 const STORAGE_KEY = 'dt-v7';
 
 
+// ─── Firebase config (injected at build time via build.js + Netlify env vars) ──
+// For local dev: create firebase-config.js manually (it's gitignored)
+const FIREBASE_CONFIG = window.FIREBASE_CONFIG || null;
+
 // ─── App state ─────────────────────────────────────────────
 
 let currentDay  = todayStr();
@@ -31,11 +35,11 @@ let pickedEmoji = '⭐';
 let nextId      = 100;
 let reminders   = { morningOn: false, morningTime: '08:00', eveningOn: false, eveningTime: '21:00' };
 
-// Supabase
-let sbClient  = null;
-let sbUrl     = '';
-let sbKey     = '';
-let syncCode  = '';
+// Firebase
+let fbApp  = null;
+let fbAuth = null;
+let fbDb   = null;
+let fbUser = null;
 
 // Charts
 let scoreChart  = null;
@@ -98,9 +102,6 @@ function loadFromStorage() {
     darkMode    = saved.darkMode    ?? false;
     nextId      = saved.nextId      ?? 100;
     reminders   = saved.reminders   ?? reminders;
-    sbUrl       = saved.sbUrl       ?? '';
-    sbKey       = saved.sbKey       ?? '';
-    syncCode    = saved.syncCode    ?? '';
   } catch (e) {
     console.warn('Failed to load local storage', e);
   }
@@ -109,8 +110,7 @@ function loadFromStorage() {
 function saveToStorage() {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
-      db, habits, pinnedTasks, darkMode,
-      nextId, reminders, sbUrl, sbKey, syncCode,
+      db, habits, pinnedTasks, darkMode, nextId, reminders,
     }));
   } catch (e) {
     console.warn('Failed to write local storage', e);
@@ -139,61 +139,50 @@ function getDay(dateStr) {
 }
 
 
-// ─── Supabase sync ─────────────────────────────────────────
+// ─── Firebase auth & sync ──────────────────────────────────
 
-function initSupabase() {
-  if (!sbUrl || !sbKey || !syncCode) {
-    sbClient = null;
-    return false;
-  }
+function initFirebase() {
+  if (!FIREBASE_CONFIG) return false;
   try {
-    sbClient = supabase.createClient(sbUrl, sbKey);
+    fbApp  = firebase.initializeApp(FIREBASE_CONFIG);
+    fbAuth = firebase.auth(fbApp);
+    fbDb   = firebase.database(fbApp);
     return true;
   } catch (e) {
-    sbClient = null;
-    return false;
+    // App already initialized (e.g. hot reload)
+    fbApp  = firebase.app();
+    fbAuth = firebase.auth();
+    fbDb   = firebase.database();
+    return true;
   }
 }
 
 async function pushToCloud() {
-  if (!sbClient || !syncCode) return;
+  if (!fbDb || !fbUser) return;
   try {
-    await sbClient.from('tracker_data').upsert({
-      sync_key:   syncCode,
-      data:       { db, habits, pinnedTasks, nextId, reminders },
+    await fbDb.ref('users/' + fbUser.uid + '/tracker').set({
+      db, habits, pinnedTasks, nextId, reminders,
       updated_at: new Date().toISOString(),
-    }, { onConflict: 'sync_key' });
+    });
   } catch (e) {
-    console.warn('Supabase push failed:', e);
+    console.warn('Firebase push failed:', e);
   }
 }
 
 async function pullFromCloud() {
-  if (!sbClient || !syncCode) return false;
+  if (!fbDb || !fbUser) return false;
   try {
-    const { data, error } = await sbClient
-    .from('tracker_data')
-    .select('data')
-    .eq('sync_key', syncCode)
-    .single();
-
-    if (error) {
-      if (error.code === 'PGRST116') return false;  // row not found
-      throw error;
-    }
-
-    if (data?.data) {
-      const d    = data.data;
-      db          = d.db          ?? db;
-      habits      = d.habits      ?? habits;
-      pinnedTasks = d.pinnedTasks ?? pinnedTasks;
-      nextId      = d.nextId      ?? nextId;
-      reminders   = d.reminders   ?? reminders;
-      return true;
-    }
-    return false;
+    const snap = await fbDb.ref('users/' + fbUser.uid + '/tracker').get();
+    if (!snap.exists()) return false;
+    const d     = snap.val();
+    db          = d.db          ?? db;
+    habits      = d.habits      ?? habits;
+    pinnedTasks = d.pinnedTasks ?? pinnedTasks;
+    nextId      = d.nextId      ?? nextId;
+    reminders   = d.reminders   ?? reminders;
+    return true;
   } catch (e) {
-    console.warn('Supabase pull failed:', e);
+    console.warn('Firebase pull failed:', e);
     return false;
   }
 }
@@ -220,7 +209,7 @@ function touch() {
   clearTimeout(saveTimer);
   saveTimer = setTimeout(async () => {
     saveToStorage();
-    if (sbClient && syncCode) {
+    if (fbUser) {
       setSaveState('syncing', 'syncing…');
       await pushToCloud();
       setSaveState('synced', 'synced ✓');
@@ -882,12 +871,10 @@ function scheduleReminders() {
 }
 
 
-// ─── Sync modal ────────────────────────────────────────────
+
+// ─── Auth modal ────────────────────────────────────────────
 
 function openSyncModal() {
-  document.getElementById('cfg-url').value  = sbUrl;
-  document.getElementById('cfg-key').value  = sbKey;
-  document.getElementById('cfg-code').value = syncCode;
   updateSyncDisplay();
   document.getElementById('sync-modal').classList.remove('hidden');
 }
@@ -897,47 +884,86 @@ function closeSyncModal() {
 }
 
 function updateSyncDisplay() {
-  const connected = !!(sbClient && sbUrl && sbKey && syncCode);
+  const signedIn = !!fbUser;
+  document.getElementById('sync-btn').className = 'btn btn-sq' + (signedIn ? ' btn-sync-on' : '');
+  document.getElementById('sync-btn').title     = signedIn ? 'Signed in as ' + fbUser.email : 'Sign in to sync';
 
-  document.getElementById('disconnect-btn').hidden = !connected;
-  document.getElementById('sync-btn').className    = 'btn btn-sq' + (connected ? ' btn-sync-on' : '');
-  document.getElementById('sync-btn').title        = connected ? 'Sync: ON' : 'Sync: OFF';
+  document.getElementById('sync-status-display').innerHTML = signedIn
+    ? `<div class="sync-status-badge connected"><div class="status-dot"></div>Signed in as ${esc(fbUser.email)}</div>`
+    : `<div class="sync-status-badge disconnected"><div class="status-dot"></div>Not signed in — local only</div>`;
 
-  const host = sbUrl.replace('https://', '').split('.')[0];
-  document.getElementById('sync-status-display').innerHTML = `
-  <div class="sync-status-badge ${connected ? 'connected' : 'disconnected'}">
-  <div class="status-dot"></div>
-  ${connected ? `Connected · ${host}…` : 'Not connected — local only'}
-  </div>`;
+  document.getElementById('auth-form-area').classList.toggle('hidden', signedIn);
+  document.getElementById('auth-signout-area').classList.toggle('hidden', !signedIn);
+  if (signedIn) document.getElementById('auth-signout-email').textContent = fbUser.email;
+  setAuthMsg('');
 }
 
-async function connectSync() {
-  const url  = document.getElementById('cfg-url').value.trim();
-  const key  = document.getElementById('cfg-key').value.trim();
-  const code = document.getElementById('cfg-code').value.trim();
-
-  if (!url || !key || !code) { alert('Please fill in all three fields.'); return; }
-
-  sbUrl = url; sbKey = key; syncCode = code;
-
-  if (!initSupabase()) { alert('Could not connect. Check your URL and key.'); return; }
-
-  setSaveState('syncing', 'syncing…');
-  const pulled = await pullFromCloud();
-  saveToStorage();
-
-  if (pulled) { render(); setSaveState('synced', 'synced ✓'); }
-  else        { await pushToCloud(); setSaveState('synced', 'synced ✓'); }
-
-  updateSyncDisplay();
-  closeSyncModal();
+function setAuthTab(tab) {
+  document.getElementById('auth-tab-password').classList.toggle('active', tab === 'password');
+  document.getElementById('auth-tab-magic').classList.toggle('active', tab === 'magic');
+  document.getElementById('auth-password-form').classList.toggle('hidden', tab !== 'password');
+  document.getElementById('auth-magic-form').classList.toggle('hidden', tab !== 'magic');
 }
 
-function disconnectSync() {
-  if (!confirm('Disconnect sync? Your local data stays intact.')) return;
-  sbClient = null; sbUrl = ''; sbKey = ''; syncCode = '';
-  saveToStorage();
-  updateSyncDisplay();
+function setAuthMsg(msg, type = '') {
+  const el = document.getElementById('auth-msg');
+  el.textContent = msg;
+  el.className   = 'auth-msg' + (type ? ' ' + type : '');
+}
+
+async function signInPassword() {
+  if (!fbAuth) { setAuthMsg('Sync not configured.', 'warn'); return; }
+  const email = document.getElementById('auth-email-pw').value.trim();
+  const pass  = document.getElementById('auth-password').value;
+  if (!email || !pass) { setAuthMsg('Please fill in both fields.', 'warn'); return; }
+  setAuthMsg('Signing in…');
+  try {
+    await fbAuth.signInWithEmailAndPassword(email, pass);
+    closeSyncModal();
+  } catch (e) {
+    const msg = ['auth/user-not-found', 'auth/wrong-password', 'auth/invalid-credential'].includes(e.code)
+      ? 'Wrong email or password.' : e.message;
+    setAuthMsg(msg, 'warn');
+  }
+}
+
+async function createAccount() {
+  if (!fbAuth) { setAuthMsg('Sync not configured.', 'warn'); return; }
+  const email = document.getElementById('auth-email-pw').value.trim();
+  const pass  = document.getElementById('auth-password').value;
+  if (!email || !pass) { setAuthMsg('Please fill in both fields.', 'warn'); return; }
+  if (pass.length < 6) { setAuthMsg('Password must be at least 6 characters.', 'warn'); return; }
+  setAuthMsg('Creating account…');
+  try {
+    await fbAuth.createUserWithEmailAndPassword(email, pass);
+    closeSyncModal();
+  } catch (e) {
+    const msg = e.code === 'auth/email-already-in-use'
+      ? 'Email already in use — try signing in instead.' : e.message;
+    setAuthMsg(msg, 'warn');
+  }
+}
+
+async function sendMagicLink() {
+  if (!fbAuth) { setAuthMsg('Sync not configured.', 'warn'); return; }
+  const email = document.getElementById('auth-email-magic').value.trim();
+  if (!email) { setAuthMsg('Please enter your email.', 'warn'); return; }
+  setAuthMsg('Sending link…');
+  try {
+    await fbAuth.sendSignInLinkToEmail(email, {
+      url: window.location.href,
+      handleCodeInApp: true,
+    });
+    localStorage.setItem('emailForSignIn', email);
+    setAuthMsg('✓ Check your inbox for the sign-in link!', 'ok');
+  } catch (e) {
+    setAuthMsg(e.message, 'warn');
+  }
+}
+
+async function signOut() {
+  if (!confirm('Sign out? Your local data stays intact.')) return;
+  await fbAuth.signOut();
 }
 
 
@@ -1057,13 +1083,20 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         });
 
-        // Sync modal
-        document.getElementById('modal-close-btn').addEventListener('click',  closeSyncModal);
-        document.getElementById('connect-btn').addEventListener('click',      connectSync);
-        document.getElementById('disconnect-btn').addEventListener('click',   disconnectSync);
+        // Auth modal
+        document.getElementById('modal-close-btn').addEventListener('click', closeSyncModal);
         document.getElementById('sync-modal').addEventListener('click', e => {
           if (e.target === document.getElementById('sync-modal')) closeSyncModal();
         });
+        document.getElementById('auth-tab-password').addEventListener('click', () => setAuthTab('password'));
+        document.getElementById('auth-tab-magic').addEventListener('click',    () => setAuthTab('magic'));
+        document.getElementById('signin-btn').addEventListener('click',  signInPassword);
+        document.getElementById('create-btn').addEventListener('click',  createAccount);
+        document.getElementById('magic-btn').addEventListener('click',   sendMagicLink);
+        document.getElementById('signout-btn').addEventListener('click', signOut);
+        document.getElementById('auth-email-pw').addEventListener('keydown',    e => { if (e.key === 'Enter') signInPassword(); });
+        document.getElementById('auth-password').addEventListener('keydown',    e => { if (e.key === 'Enter') signInPassword(); });
+        document.getElementById('auth-email-magic').addEventListener('keydown', e => { if (e.key === 'Enter') sendMagicLink(); });
 
           // Reminders
           document.getElementById('rem-morning-on').addEventListener('change',   saveReminders);
@@ -1085,10 +1118,32 @@ if (!localStorage.getItem(STORAGE_KEY) && window.matchMedia('(prefers-color-sche
   applyTheme();
 }
 
-if (initSupabase()) {
-  pullFromCloud().then(pulled => {
-    if (pulled) { saveToStorage(); render(); return; }
-    render();
+if (initFirebase()) {
+  // Handle magic link sign-in if returning from email link
+  if (fbAuth.isSignInWithEmailLink(window.location.href)) {
+    let email = localStorage.getItem('emailForSignIn')
+      || window.prompt('Confirm your email to complete sign-in:');
+    if (email) {
+      fbAuth.signInWithEmailLink(email, window.location.href).then(() => {
+        localStorage.removeItem('emailForSignIn');
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }).catch(e => console.warn('Magic link sign-in failed:', e));
+    }
+  }
+
+  fbAuth.onAuthStateChanged(async user => {
+    fbUser = user;
+    updateSyncDisplay();
+    if (user) {
+      setSaveState('syncing', 'syncing…');
+      const pulled = await pullFromCloud();
+      saveToStorage();
+      render();
+      setSaveState(pulled ? 'synced' : 'saved', pulled ? 'synced ✓' : 'saved ✓');
+      if (!pulled) await pushToCloud();
+    } else {
+      render();
+    }
   });
 } else {
   render();

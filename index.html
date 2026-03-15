@@ -22,55 +22,58 @@
     <div class="emoji-box" id="emoji-box"></div>
   </div>
 
-  <!-- Supabase sync modal -->
+  <!-- Auth / sync modal -->
   <div class="modal-overlay hidden" id="sync-modal">
     <div class="modal">
       <div class="modal-head">
-        <span class="modal-title">☁️ Sync Settings</span>
+        <span class="modal-title">☁️ Sync</span>
         <button class="modal-close" id="modal-close-btn">×</button>
       </div>
       <div class="modal-body">
         <div id="sync-status-display"></div>
 
-        <div class="modal-section">
-          <label class="field-label" for="cfg-url">Supabase URL</label>
-          <input class="field-inp" id="cfg-url" type="url" placeholder="https://xxxxxxxxxxxx.supabase.co" autocomplete="off" />
-          <p class="field-hint">Settings → API in your Supabase project</p>
+        <!-- Signed-in state -->
+        <div id="auth-signout-area" class="hidden">
+          <p class="auth-user-email" id="auth-signout-email"></p>
+          <p class="field-hint" style="margin-bottom:14px">Your data syncs automatically on every save.</p>
+          <button class="modal-btn secondary" id="signout-btn">Sign Out</button>
         </div>
 
-        <div class="modal-section">
-          <label class="field-label" for="cfg-key">Supabase Anon Key</label>
-          <input class="field-inp" id="cfg-key" type="password" placeholder="eyJhbGciOiJIUzI1NiIs…" autocomplete="off" />
-          <p class="field-hint">Public anon key — safe to use in a browser</p>
-        </div>
-
-        <div class="modal-section">
-          <label class="field-label" for="cfg-code">Sync Code</label>
-          <input class="field-inp" id="cfg-code" type="text" placeholder="e.g. mango-sunrise-42" maxlength="60" autocomplete="off" />
-          <p class="field-hint">A private passphrase. Use the same code on all your devices.</p>
-        </div>
-
-        <button class="modal-btn" id="connect-btn">Connect &amp; Sync Now</button>
-        <button class="modal-btn secondary" id="disconnect-btn" hidden>Disconnect</button>
-
-        <details class="setup-guide">
-          <summary>New to Supabase? Setup guide</summary>
-          <div class="setup-steps">
-            <p>1. <a href="https://supabase.com" target="_blank" rel="noopener">supabase.com</a> → free account → New project</p>
-            <p>2. SQL Editor → run this once:</p>
-            <pre>create table tracker_data (
-  sync_key text primary key,
-  data jsonb not null,
-  updated_at timestamptz default now()
-);
-alter table tracker_data enable row level security;
-create policy "public"
-  on tracker_data for all
-  using (true) with check (true);</pre>
-            <p>3. Settings → API → copy URL + anon key</p>
-            <p>4. Paste both above, pick a sync code, hit Connect</p>
+        <!-- Sign-in / register form -->
+        <div id="auth-form-area">
+          <div class="auth-tabs">
+            <button class="auth-tab active" id="auth-tab-password">Password</button>
+            <button class="auth-tab"        id="auth-tab-magic">Magic Link</button>
           </div>
-        </details>
+
+          <!-- Password form -->
+          <div id="auth-password-form">
+            <div class="modal-section">
+              <label class="field-label" for="auth-email-pw">Email</label>
+              <input class="field-inp" id="auth-email-pw" type="email" placeholder="you@example.com" autocomplete="email" />
+            </div>
+            <div class="modal-section">
+              <label class="field-label" for="auth-password">Password</label>
+              <input class="field-inp" id="auth-password" type="password" placeholder="Min 6 characters" autocomplete="current-password" />
+            </div>
+            <div class="auth-btns">
+              <button class="modal-btn" id="signin-btn">Sign In</button>
+              <button class="modal-btn secondary" id="create-btn">Create Account</button>
+            </div>
+          </div>
+
+          <!-- Magic link form -->
+          <div id="auth-magic-form" class="hidden">
+            <div class="modal-section">
+              <label class="field-label" for="auth-email-magic">Email</label>
+              <input class="field-inp" id="auth-email-magic" type="email" placeholder="you@example.com" autocomplete="email" />
+              <p class="field-hint">We'll send a one-click sign-in link — no password needed.</p>
+            </div>
+            <button class="modal-btn" id="magic-btn">Send Magic Link</button>
+          </div>
+
+          <p class="auth-msg" id="auth-msg"></p>
+        </div>
       </div>
     </div>
   </div>
@@ -315,7 +318,10 @@ create policy "public"
   </div><!-- /page -->
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+  <script src="firebase-config.js"></script>
   <script src="app.js"></script>
 
 </body>

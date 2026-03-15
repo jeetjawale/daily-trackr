@@ -1,0 +1,7 @@
+# Firebase config — generated at build time from Netlify env vars, never commit
+firebase-config.js
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/

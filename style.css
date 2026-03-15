@@ -1740,6 +1740,64 @@ body {
 
 
 /* ============================================================
+   Auth modal
+   ============================================================ */
+
+.auth-tabs {
+  display: flex;
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  border-radius: 9px;
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+
+.auth-tab {
+  flex: 1;
+  background: none;
+  border: none;
+  padding: 9px 0;
+  font-size: var(--f-sm);
+  font-weight: 500;
+  font-family: 'DM Sans', sans-serif;
+  color: var(--text3);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.auth-tab.active { background: var(--text); color: var(--bg); }
+
+.auth-btns {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.auth-btns .modal-btn { flex: 1; margin: 0; }
+
+.auth-msg {
+  margin-top: 12px;
+  font-family: 'DM Mono', monospace;
+  font-size: var(--f-xs);
+  color: var(--text3);
+  min-height: 18px;
+}
+
+.auth-msg.warn { color: #d97706; }
+.auth-msg.ok   { color: var(--green); }
+
+.auth-user-email {
+  font-family: 'DM Mono', monospace;
+  font-size: var(--f-sm);
+  font-weight: 500;
+  color: var(--text);
+  margin-bottom: 6px;
+  word-break: break-all;
+}
+
+
+/* ============================================================
    Scrollbar
    ============================================================ */
 

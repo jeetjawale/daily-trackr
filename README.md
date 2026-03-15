@@ -1,8 +1,8 @@
 # Daily Tracker
 
-A lightweight, zero-dependency personal productivity tracker that runs entirely in the browser. Track habits, tasks, sleep, meals, and daily reflections — with optional cross-device sync via Supabase.
+A lightweight, zero-dependency personal productivity tracker that runs entirely in the browser. Track habits, tasks, sleep, meals, and daily reflections — with optional cross-device sync via Firebase.
 
-![Daily Tracker](https://img.shields.io/badge/version-1.0.0-blue) ![License](https://img.shields.io/badge/license-MIT-green) ![No build step](https://img.shields.io/badge/build-none-brightgreen)
+![version](https://img.shields.io/badge/version-2.0.0-blue) ![license](https://img.shields.io/badge/license-MIT-green) ![netlify](https://img.shields.io/badge/build-netlify-brightgreen)
 
 ---
 
@@ -31,8 +31,8 @@ A lightweight, zero-dependency personal productivity tracker that runs entirely 
 
 **Other**
 - 🌗 Dark / light mode (auto-detects system preference on first visit)
-- ☁️ Optional Supabase sync — same data across all your devices
-- 🔔 Browser notifications for morning check-in and evening reflection reminders
+- ☁️ Firebase sync — sign in with email + password or magic link, data syncs automatically
+- 🔔 Browser notifications for morning check-in and evening reflection
 - ⟳ Copy yesterday's tasks and goal to today in one click
 - 💾 Auto-save to `localStorage` with a visible save/sync indicator
 
@@ -40,22 +40,33 @@ A lightweight, zero-dependency personal productivity tracker that runs entirely 
 
 ## Getting Started
 
-No build step, no install, no dependencies to manage.
+No build step required for local use.
 
 ```bash
-git clone https://github.com/your-username/daily-tracker.git
+git clone https://github.com/jeetjawale/daily-tracker.git
 cd daily-tracker
 ```
 
-Then just open `index.html` in your browser — or serve it with any static file server:
+For local dev with sync, create `firebase-config.js` in the project root (it's gitignored):
+
+```js
+window.FIREBASE_CONFIG = {
+  apiKey:      'YOUR_API_KEY',
+  authDomain:  'YOUR_PROJECT.firebaseapp.com',
+  databaseURL: 'https://YOUR_PROJECT-default-rtdb.firebaseio.com',
+  projectId:   'YOUR_PROJECT',
+};
+```
+
+Then serve locally:
 
 ```bash
-# Python
-python -m http.server 8080
-
-# Node
 npx serve .
+# or
+python -m http.server 8080
 ```
+
+Without `firebase-config.js`, the app works fully offline — sync is just disabled.
 
 ---
 
@@ -63,58 +74,74 @@ npx serve .
 
 ```
 daily-tracker/
-├── index.html   # App shell and markup
-├── style.css    # All styles (CSS custom properties, dark mode, responsive)
-└── app.js       # All app logic (no frameworks, no bundler)
+├── index.html          # App shell and markup
+├── style.css           # All styles (CSS custom properties, dark mode, responsive)
+├── app.js              # All app logic (no frameworks, no bundler)
+├── build.js            # Netlify build script — generates firebase-config.js from env vars
+├── netlify.toml        # Netlify build config
+├── .gitignore          # Keeps firebase-config.js out of the repo
+└── firebase-config.js  # NOT committed — generated at build time
 ```
-
-Everything is intentionally kept in three files for simplicity and portability.
 
 ---
 
-## Optional: Supabase Sync
+## Sync Setup (one-time, for the developer)
 
-To sync your data across multiple devices, set up a free Supabase project:
+Users just click ☁️ and sign in — no setup on their end. You configure Firebase once.
 
-1. Go to [supabase.com](https://supabase.com) → create a free account → New project
-2. Open the **SQL Editor** and run this once:
+### 1. Create a Firebase project
 
-```sql
-create table tracker_data (
-  sync_key text primary key,
-  data jsonb not null,
-  updated_at timestamptz default now()
-);
-alter table tracker_data enable row level security;
-create policy "public"
-  on tracker_data for all
-  using (true) with check (true);
+1. Go to [console.firebase.google.com](https://console.firebase.google.com) → **Add project**
+2. **Build → Authentication → Get started** → enable **Email/Password** and **Email link (passwordless)**
+3. Under Email link, add your Netlify URL to **Authorized domains** (e.g. `daily-tracker-app.netlify.app`)
+4. **Build → Realtime Database → Create database → Start in test mode**
+5. In the **Rules** tab, replace with:
+
+```json
+{
+  "rules": {
+    "users": {
+      "$uid": {
+        ".read":  "$uid === auth.uid",
+        ".write": "$uid === auth.uid"
+      }
+    }
+  }
+}
 ```
 
-3. Go to **Settings → API** → copy your **Project URL** and **anon public key**
-4. In the app, click the ☁️ button → paste both values + choose a personal sync code → **Connect & Sync Now**
+### 2. Add environment variables in Netlify
 
-Use the same sync code on all your devices. Your data will sync automatically on every save.
+**Site configuration → Environment variables → Add a variable:**
 
-> **Note:** The anon key is safe to use in the browser. The sync code acts as your private passphrase — anyone who knows it can read and write your data, so treat it like a password.
+| Variable | Where to find it |
+|---|---|
+| `FIREBASE_API_KEY` | Project Settings → General → Web API Key |
+| `FIREBASE_AUTH_DOMAIN` | `your-project.firebaseapp.com` |
+| `FIREBASE_DATABASE_URL` | Realtime Database → URL at the top |
+| `FIREBASE_PROJECT_ID` | Project Settings → General → Project ID |
+
+### 3. Deploy
+
+```bash
+git push
+```
+
+Netlify runs `node build.js`, which generates `firebase-config.js` from env vars at build time. The file is gitignored — keys never touch the repo.
 
 ---
 
 ## Browser Notifications
 
-Reminders are powered by the [Notifications API](https://developer.mozilla.org/en-US/docs/Web/API/Notifications_API). To enable them:
-
-1. Switch to the **Trends** view
+1. Switch to **Trends** view
 2. Toggle on **Morning check-in** and/or **Evening reflection**
 3. Grant notification permission when prompted
-
-Times can be adjusted freely. Reminders auto-reschedule for the next day after firing. Notifications require the page to be open in a browser tab.
 
 ---
 
 ## Data Storage
 
-All data is saved to `localStorage` under the key `dt-v7`. Nothing is sent anywhere unless you configure Supabase sync. To export or back up your data, open DevTools → Application → Local Storage and copy the value.
+All data is saved to `localStorage` under the key `dt-v7`. Nothing is sent anywhere unless you sign in. To back up: DevTools → Application → Local Storage → copy the value.
 
 ---
 
@@ -125,8 +152,9 @@ All data is saved to `localStorage` under the key `dt-v7`. Nothing is sent anywh
 | UI | Vanilla HTML + CSS (CSS custom properties) |
 | Logic | Vanilla JavaScript (ES2020, no frameworks) |
 | Charts | [Chart.js 4.4](https://www.chartjs.org/) via CDN |
-| Sync | [Supabase JS v2](https://supabase.com/docs/reference/javascript) via CDN (optional) |
+| Sync | [Firebase Auth + Realtime Database](https://firebase.google.com) via CDN |
 | Fonts | [DM Sans + DM Mono](https://fonts.google.com/) via Google Fonts |
+| Hosting | [Netlify](https://netlify.com) |
 
 ---
 
