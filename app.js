@@ -994,37 +994,56 @@ async function deleteAccount() {
   );
   if (!confirmed) return;
 
-  // Re-authenticate first — Firebase requires recent login before deletion
-  const pass = window.prompt('Enter your password to confirm:');
-  if (pass === null) return; // user cancelled
+  // Check how the user signed in
+  const providers = fbUser.providerData.map(p => p.providerId);
+  const isEmailLink = providers.includes('emailLink');
+  const isPassword  = providers.includes('password');
 
-  setAuthMsg('Deleting account…');
+  setAuthMsg('Verifying identity…');
+  closeSyncModal();
+
   try {
-    const credential = firebase.auth.EmailAuthProvider.credential(fbUser.email, pass);
-    await fbUser.reauthenticateWithCredential(credential);
+    if (isPassword) {
+      // Password user — prompt for password to re-auth
+      const pass = window.prompt('Enter your password to confirm account deletion:');
+      if (pass === null) { openSyncModal(); setAuthMsg('', ''); return; }
+      const credential = firebase.auth.EmailAuthProvider.credential(fbUser.email, pass);
+      await fbUser.reauthenticateWithCredential(credential);
 
-    // Delete cloud data first, then the account
-    if (fbDb) {
-      await fbDb.ref('users/' + fbUser.uid).remove();
+    } else if (isEmailLink) {
+      // Magic link user — send a new sign-in link, then delete after they click it
+      const url = window.location.origin + window.location.pathname + '?deleteAccount=1';
+      await fbAuth.sendSignInLinkToEmail(fbUser.email, { url, handleCodeInApp: true });
+      localStorage.setItem('emailForSignIn', fbUser.email);
+      localStorage.setItem('pendingDelete', '1');
+      openSyncModal();
+      setAuthMsg('✓ Check your email — click the link to confirm deletion.', 'ok');
+      return;
     }
-    await fbUser.delete();
 
-    // Clear local storage too
-    localStorage.removeItem(STORAGE_KEY);
-    db = {}; habits = structuredClone(DEFAULT_HABITS); pinnedTasks = [];
-    nextId = 100; reminders = { morningOn: false, morningTime: '08:00', eveningOn: false, eveningTime: '21:00' };
-    render();
-    closeSyncModal();
-    alert('Account deleted. Your local data has also been cleared.');
+    await performDelete();
+
   } catch (e) {
     const msg = e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential'
       ? 'Wrong password — account not deleted.'
       : e.code === 'auth/requires-recent-login'
-      ? 'Please sign out and sign in again before deleting your account.'
+      ? 'Session expired — please sign out and sign back in, then try again.'
       : e.message;
-    setAuthMsg(msg, 'warn');
     openSyncModal();
+    setAuthMsg(msg, 'warn');
   }
+}
+
+async function performDelete() {
+  if (!fbUser) return;
+  if (fbDb) await fbDb.ref('users/' + fbUser.uid).remove();
+  await fbUser.delete();
+  localStorage.removeItem(STORAGE_KEY);
+  localStorage.removeItem('pendingDelete');
+  db = {}; habits = structuredClone(DEFAULT_HABITS); pinnedTasks = [];
+  nextId = 100; reminders = { morningOn: false, morningTime: '08:00', eveningOn: false, eveningTime: '21:00' };
+  render();
+  alert('Account deleted. Your local data has also been cleared.');
 }
 
 
@@ -1184,13 +1203,23 @@ if (!localStorage.getItem(STORAGE_KEY) && window.matchMedia('(prefers-color-sche
 if (initFirebase()) {
   // Handle magic link sign-in if returning from email link
   if (fbAuth.isSignInWithEmailLink(window.location.href)) {
-    let email = localStorage.getItem('emailForSignIn')
+    const email = localStorage.getItem('emailForSignIn')
       || window.prompt('Confirm your email to complete sign-in:');
     if (email) {
-      fbAuth.signInWithEmailLink(email, window.location.href).then(() => {
-        localStorage.removeItem('emailForSignIn');
-        window.history.replaceState({}, document.title, window.location.pathname);
-      }).catch(e => console.warn('Magic link sign-in failed:', e));
+      fbAuth.signInWithEmailLink(email, window.location.href)
+        .then(async () => {
+          localStorage.removeItem('emailForSignIn');
+          window.history.replaceState({}, document.title, window.location.pathname);
+          if (localStorage.getItem('pendingDelete')) await performDelete();
+        })
+        .catch(e => {
+          console.warn('Magic link sign-in failed:', e);
+          document.addEventListener('DOMContentLoaded', () => {
+            openSyncModal();
+            setAuthTab('magic');
+            setAuthMsg('Magic link sign-in failed — please try again.', 'warn');
+          }, { once: true });
+        });
     }
   }
 
