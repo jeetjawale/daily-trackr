@@ -57,10 +57,9 @@ function todayStr() {
 
 function startClock() {
   function tick() {
-    const now = new Date();
-    const el  = document.getElementById('nav-clock');
+    const now   = new Date();
+    const el    = document.getElementById('nav-clock');
     if (!el) return;
-    // Only show clock when viewing today
     if (currentDay !== todayStr()) { el.textContent = ''; return; }
     el.textContent = now.toLocaleTimeString('en-IN', {
       hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true,
@@ -80,11 +79,12 @@ function formatDay(dateStr) {
   const diff = Math.round(
     (new Date(dateStr + 'T12:00:00') - new Date(todayStr() + 'T12:00:00')) / 86400000
   );
-  if (diff === 0)  return 'Today';
-  if (diff === -1) return 'Yesterday';
-  return new Date(dateStr + 'T12:00:00').toLocaleDateString('en-IN', {
-    weekday: 'long', day: 'numeric', month: 'short',
+  // Always show the real date — today-pill handles "today" badge
+  const dateLabel = new Date(dateStr + 'T12:00:00').toLocaleDateString('en-IN', {
+    weekday: 'short', day: 'numeric', month: 'short',
   });
+  if (diff === -1) return 'Yesterday · ' + dateLabel;
+  return dateLabel;
 }
 
 function getLast30() {
