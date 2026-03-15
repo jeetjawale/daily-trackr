@@ -437,7 +437,8 @@ function renderHabits() {
       ? `<span class="streak ${s >= 3 ? 'hot' : ''}">${s >= 3 ? '🔥 ' : ''}${s}d</span>` : '';
     const sep = i < habits.length - 1 ? '<div class="divider"></div>' : '';
     return `
-      <div class="habit-row" data-habit="${h.id}">
+      <div class="habit-row" data-habit="${h.id}" draggable="true" data-idx="${i}">
+        <span class="habit-drag" aria-hidden="true">⠿</span>
         <div class="chk ${checked ? 'on' : ''}">${checked ? '✓' : ''}</div>
         <span class="h-ico">${h.icon}</span>
         <span class="h-lbl ${checked ? 'on' : ''}">${h.label}</span>
@@ -445,16 +446,50 @@ function renderHabits() {
         <button class="habit-del" data-habit-del="${h.id}">×</button>
       </div>${sep}`;
   }).join('');
+
+  // Toggle click
   document.querySelectorAll('.habit-row[data-habit]').forEach(el => {
     el.addEventListener('click', e => {
-      if (e.target.closest('[data-habit-del]')) return;
+      if (e.target.closest('[data-habit-del]') || e.target.closest('.habit-drag')) return;
       toggleHabit(el.dataset.habit);
     });
   });
+
+  // Delete click
   document.querySelectorAll('[data-habit-del]').forEach(el => {
     el.addEventListener('click', e => {
       e.stopPropagation();
       deleteHabit(el.dataset.habitDel);
+    });
+  });
+
+  // Drag-to-reorder
+  let dragIdx = null;
+  const list = document.getElementById('habits-list');
+  list.querySelectorAll('.habit-row').forEach(row => {
+    row.addEventListener('dragstart', e => {
+      dragIdx = +row.dataset.idx;
+      row.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    row.addEventListener('dragend', () => {
+      row.classList.remove('dragging');
+      list.querySelectorAll('.habit-row').forEach(r => r.classList.remove('drag-over'));
+    });
+    row.addEventListener('dragover', e => {
+      e.preventDefault();
+      if (+row.dataset.idx !== dragIdx) row.classList.add('drag-over');
+    });
+    row.addEventListener('dragleave', () => row.classList.remove('drag-over'));
+    row.addEventListener('drop', e => {
+      e.preventDefault();
+      row.classList.remove('drag-over');
+      const dropIdx = +row.dataset.idx;
+      if (dragIdx === null || dragIdx === dropIdx) return;
+      const moved = habits.splice(dragIdx, 1)[0];
+      habits.splice(dropIdx, 0, moved);
+      dragIdx = null;
+      touch(); renderHabits(); updateScoreStrip();
     });
   });
 }
@@ -463,6 +498,16 @@ function toggleHabit(id) {
   getDay(currentDay).habits[id] = !getDay(currentDay).habits[id];
   touch(); renderHabits(); updateScoreStrip();
   if (activeView === 'week') renderWeek();
+
+  // Streak milestone toasts
+  if (getDay(currentDay).habits[id]) {
+    const streak = calcStreak(id);
+    const milestones = [7, 14, 21, 30, 60, 100, 365];
+    if (milestones.includes(streak)) {
+      const habit = habits.find(h => h.id === id);
+      showToast(`🔥 ${streak}-day streak! ${habit?.icon ?? ''} ${habit?.label ?? ''}`);
+    }
+  }
 }
 
 function deleteHabit(id) {
@@ -608,6 +653,8 @@ function renderWeek() {
         </div>`;
     }).join('')}
   `;
+
+  renderWeeklyReview();
 }
 
 function jumpToDay(dateStr) {
@@ -716,6 +763,8 @@ function renderTrends() {
       }
     },
   });
+
+  renderHeatmap();
 }
 
 
@@ -932,6 +981,132 @@ async function deleteAccount() {
       : e.message;
     setAuthMsg(msg, 'warn');
   }
+}
+
+
+// ─── Toast notifications ───────────────────────────────────
+
+function showToast(msg, duration = 3500) {
+  let toast = document.getElementById('app-toast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'app-toast';
+    document.body.appendChild(toast);
+  }
+  toast.textContent = msg;
+  toast.classList.add('show');
+  clearTimeout(toast._timer);
+  toast._timer = setTimeout(() => toast.classList.remove('show'), duration);
+}
+
+
+// ─── Weekly review ─────────────────────────────────────────
+
+function renderWeeklyReview() {
+  const dates      = getWeekDates(currentDay);
+  const weekStart  = dates[0];
+  const weekEnd    = dates[6];
+  const fmt        = d => new Date(d + 'T12:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+  const isCurrent  = weekEnd >= todayStr();
+
+  // Pull saved review or blank
+  if (!db['_reviews']) db['_reviews'] = {};
+  const key    = weekStart;
+  const review = db['_reviews'][key] ?? { went_well: '', improve: '', next_goal: '' };
+  db['_reviews'][key] = review;
+
+  document.getElementById('weekly-review').innerHTML = `
+    <div class="wr-header">
+      <span class="wr-range">${fmt(weekStart)} – ${fmt(weekEnd)}</span>
+    </div>
+    <div class="wr-fields">
+      <div class="wr-field">
+        <label class="wr-lbl" for="wr-went-well">✅ What went well</label>
+        <textarea class="wr-ta" id="wr-went-well" placeholder="Highlights, wins, proud moments…" rows="2">${esc(review.went_well)}</textarea>
+      </div>
+      <div class="wr-field">
+        <label class="wr-lbl" for="wr-improve">🔧 What to improve</label>
+        <textarea class="wr-ta" id="wr-improve" placeholder="What held you back? What to do differently?" rows="2">${esc(review.improve)}</textarea>
+      </div>
+      <div class="wr-field">
+        <label class="wr-lbl" for="wr-next-goal">🎯 Goal for next week</label>
+        <textarea class="wr-ta" id="wr-next-goal" placeholder="One clear priority for next week…" rows="2">${esc(review.next_goal)}</textarea>
+      </div>
+    </div>
+  `;
+
+  ['went-well', 'improve', 'next-goal'].forEach(field => {
+    const el  = document.getElementById('wr-' + field);
+    const key2 = field.replace('-', '_');
+    el.addEventListener('input', () => {
+      db['_reviews'][key][key2] = el.value;
+      touch();
+    });
+  });
+}
+
+
+// ─── Calendar heatmap ──────────────────────────────────────
+
+function renderHeatmap() {
+  const today    = todayStr();
+  const days     = 91; // 13 weeks
+  const allDates = Array.from({ length: days }, (_, i) => shiftDay(today, i - days + 1));
+
+  const scores = allDates.map(d => hasData(d) ? calcScore(d) : null);
+
+  // Build 13 columns of 7 days
+  const weeks = [];
+  for (let w = 0; w < 13; w++) {
+    weeks.push(allDates.slice(w * 7, w * 7 + 7));
+  }
+
+  const DOW_LABELS = ['M', '', 'W', '', 'F', '', 'S'];
+
+  const cells = weeks.map(week => {
+    const cols = week.map((d, i) => {
+      const score = scores[allDates.indexOf(d)];
+      const level = score === null ? 0
+        : score >= 80 ? 4
+        : score >= 60 ? 3
+        : score >= 40 ? 2
+        : score > 0   ? 1 : 0;
+      const isToday = d === today;
+      const label   = new Date(d + 'T12:00:00').toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' });
+      return `<div class="hm-cell lv${level} ${isToday ? 'hm-today' : ''}" data-date="${d}" title="${label}${score !== null ? ': ' + score + '%' : ''}"></div>`;
+    }).join('');
+    return `<div class="hm-col">${cols}</div>`;
+  }).join('');
+
+  const monthLabels = (() => {
+    const seen = new Set();
+    return weeks.map(week => {
+      const m = new Date(week[0] + 'T12:00:00').toLocaleDateString('en-IN', { month: 'short' });
+      if (seen.has(m)) return '<div class="hm-month"></div>';
+      seen.add(m); return `<div class="hm-month">${m}</div>`;
+    }).join('');
+  })();
+
+  document.getElementById('heatmap-container').innerHTML = `
+    <div class="hm-months">${monthLabels}</div>
+    <div class="hm-body">
+      <div class="hm-dow">${DOW_LABELS.map(l => `<div class="hm-dow-lbl">${l}</div>`).join('')}</div>
+      <div class="hm-grid">${cells}</div>
+    </div>
+    <div class="hm-legend">
+      <span class="hm-leg-lbl">Less</span>
+      <div class="hm-cell lv0"></div><div class="hm-cell lv1"></div><div class="hm-cell lv2"></div><div class="hm-cell lv3"></div><div class="hm-cell lv4"></div>
+      <span class="hm-leg-lbl">More</span>
+    </div>
+  `;
+
+  // Click to jump to day
+  document.querySelectorAll('.hm-cell[data-date]').forEach(el => {
+    el.addEventListener('click', () => {
+      setView('day');
+      jumpToDay(el.dataset.date);
+    });
+  });
 }
 
 

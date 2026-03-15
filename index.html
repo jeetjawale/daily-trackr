@@ -306,6 +306,14 @@
       <div class="week-grid"         id="week-grid"></div>
       <div class="week-summary"      id="week-summary"></div>
       <div class="habit-week-table"  id="habit-week-table"></div>
+
+      <!-- Weekly review -->
+      <div class="card" style="margin-top:9px">
+        <div class="card-head">
+          <h2 class="card-title"><span class="card-ico">📋</span> Weekly Review</h2>
+        </div>
+        <div id="weekly-review"></div>
+      </div>
     </div>
 
 
@@ -327,6 +335,16 @@
         <div class="chart-card">
           <p class="chart-lbl">Habit completions</p>
           <canvas id="habit-chart" height="150"></canvas>
+        </div>
+      </div>
+
+      <!-- Heatmap -->
+      <div class="card full" style="margin-bottom:7px">
+        <div class="card-head">
+          <h2 class="card-title"><span class="card-ico">📅</span> Activity — last 13 weeks</h2>
+        </div>
+        <div class="heatmap-wrap">
+          <div id="heatmap-container"></div>
         </div>
       </div>
 

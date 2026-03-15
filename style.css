@@ -1846,6 +1846,198 @@ body {
 
 
 /* ============================================================
+   Toast
+   ============================================================ */
+
+#app-toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(12px);
+  background: var(--text);
+  color: var(--bg);
+  font-size: var(--f-sm);
+  font-weight: 500;
+  padding: 10px 20px;
+  border-radius: 24px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s, transform 0.2s;
+  z-index: 9999;
+}
+
+#app-toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+
+/* ============================================================
+   Habit drag-to-reorder
+   ============================================================ */
+
+.habit-drag {
+  font-size: 14px;
+  color: var(--text3);
+  cursor: grab;
+  padding: 0 4px 0 0;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.habit-row.dragging { opacity: 0.4; }
+.habit-row.drag-over { background: var(--hover); border-radius: 8px; }
+
+
+/* ============================================================
+   Weekly review
+   ============================================================ */
+
+.wr-header {
+  padding: 8px var(--cp) 12px;
+}
+
+.wr-range {
+  font-family: 'DM Mono', monospace;
+  font-size: var(--f-xs);
+  color: var(--text3);
+}
+
+.wr-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.wr-field {
+  padding: 10px var(--cp);
+  border-top: 1px solid var(--border);
+}
+
+.wr-lbl {
+  display: block;
+  font-size: var(--f-xs);
+  font-weight: 500;
+  color: var(--text2);
+  margin-bottom: 6px;
+}
+
+.wr-ta {
+  width: 100%;
+  background: transparent;
+  border: none;
+  outline: none;
+  resize: none;
+  font-family: 'DM Sans', sans-serif;
+  font-size: var(--f-base);
+  color: var(--text);
+  line-height: 1.5;
+  padding: 0;
+}
+
+.wr-ta::placeholder { color: var(--text3); }
+
+
+/* ============================================================
+   Calendar heatmap
+   ============================================================ */
+
+.heatmap-wrap {
+  padding: 4px var(--cp) 14px;
+  overflow-x: auto;
+}
+
+.hm-months {
+  display: flex;
+  gap: 2px;
+  margin-bottom: 4px;
+  padding-left: 18px;
+}
+
+.hm-month {
+  font-size: 9px;
+  color: var(--text3);
+  width: 14px;
+  flex-shrink: 0;
+  text-align: left;
+  font-family: 'DM Mono', monospace;
+}
+
+.hm-body {
+  display: flex;
+  gap: 4px;
+  align-items: flex-start;
+}
+
+.hm-dow {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.hm-dow-lbl {
+  font-size: 9px;
+  color: var(--text3);
+  height: 12px;
+  line-height: 12px;
+  font-family: 'DM Mono', monospace;
+  width: 10px;
+}
+
+.hm-grid {
+  display: flex;
+  gap: 2px;
+}
+
+.hm-col {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.hm-cell {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: opacity 0.1s;
+  flex-shrink: 0;
+}
+
+.hm-cell:hover { opacity: 0.75; }
+
+.hm-cell.lv0 { background: var(--border); }
+.hm-cell.lv1 { background: #bbf0d4; }
+.hm-cell.lv2 { background: #6ee09e; }
+.hm-cell.lv3 { background: #2dba6a; }
+.hm-cell.lv4 { background: #166534; }
+
+[data-theme="dark"] .hm-cell.lv1 { background: #0d3b22; }
+[data-theme="dark"] .hm-cell.lv2 { background: #166534; }
+[data-theme="dark"] .hm-cell.lv3 { background: #22c55e; }
+[data-theme="dark"] .hm-cell.lv4 { background: #4ade80; }
+
+.hm-cell.hm-today { outline: 2px solid var(--text2); outline-offset: 1px; }
+
+.hm-legend {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin-top: 8px;
+  padding-left: 14px;
+}
+
+.hm-leg-lbl {
+  font-size: 9px;
+  color: var(--text3);
+  font-family: 'DM Mono', monospace;
+  margin: 0 2px;
+}
+
+
+/* ============================================================
    Scrollbar
    ============================================================ */
 
