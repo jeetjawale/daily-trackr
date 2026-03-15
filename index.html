@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Daily Tracker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- Save / sync status pill -->
+  <div class="save-ind" id="save-ind">
+    <div class="sync-dot" id="sync-dot"></div>
+    <span id="save-txt">saving…</span>
+  </div>
+
+  <!-- Emoji picker overlay -->
+  <div class="emoji-popup hidden" id="emoji-popup">
+    <div class="emoji-box" id="emoji-box"></div>
+  </div>
+
+  <!-- Supabase sync modal -->
+  <div class="modal-overlay hidden" id="sync-modal">
+    <div class="modal">
+      <div class="modal-head">
+        <span class="modal-title">☁️ Sync Settings</span>
+        <button class="modal-close" id="modal-close-btn">×</button>
+      </div>
+      <div class="modal-body">
+        <div id="sync-status-display"></div>
+
+        <div class="modal-section">
+          <label class="field-label" for="cfg-url">Supabase URL</label>
+          <input class="field-inp" id="cfg-url" type="url" placeholder="https://xxxxxxxxxxxx.supabase.co" autocomplete="off" />
+          <p class="field-hint">Settings → API in your Supabase project</p>
+        </div>
+
+        <div class="modal-section">
+          <label class="field-label" for="cfg-key">Supabase Anon Key</label>
+          <input class="field-inp" id="cfg-key" type="password" placeholder="eyJhbGciOiJIUzI1NiIs…" autocomplete="off" />
+          <p class="field-hint">Public anon key — safe to use in a browser</p>
+        </div>
+
+        <div class="modal-section">
+          <label class="field-label" for="cfg-code">Sync Code</label>
+          <input class="field-inp" id="cfg-code" type="text" placeholder="e.g. mango-sunrise-42" maxlength="60" autocomplete="off" />
+          <p class="field-hint">A private passphrase. Use the same code on all your devices.</p>
+        </div>
+
+        <button class="modal-btn" id="connect-btn">Connect &amp; Sync Now</button>
+        <button class="modal-btn secondary" id="disconnect-btn" hidden>Disconnect</button>
+
+        <details class="setup-guide">
+          <summary>New to Supabase? Setup guide</summary>
+          <div class="setup-steps">
+            <p>1. <a href="https://supabase.com" target="_blank" rel="noopener">supabase.com</a> → free account → New project</p>
+            <p>2. SQL Editor → run this once:</p>
+            <pre>create table tracker_data (
+  sync_key text primary key,
+  data jsonb not null,
+  updated_at timestamptz default now()
+);
+alter table tracker_data enable row level security;
+create policy "public"
+  on tracker_data for all
+  using (true) with check (true);</pre>
+            <p>3. Settings → API → copy URL + anon key</p>
+            <p>4. Paste both above, pick a sync code, hit Connect</p>
+          </div>
+        </details>
+      </div>
+    </div>
+  </div>
+
+  <!-- App shell -->
+  <div class="page">
+
+    <!-- Navigation bar -->
+    <nav class="nav">
+      <div class="nav-left">
+        <span class="nav-day" id="nav-day"></span>
+        <span class="today-pill" id="today-pill" hidden>today</span>
+      </div>
+      <div class="nav-right">
+        <div class="view-toggle" role="group" aria-label="View">
+          <button class="vt-btn active" id="vt-day"    data-view="day">Day</button>
+          <button class="vt-btn"        id="vt-week"   data-view="week">Week</button>
+          <button class="vt-btn"        id="vt-trends" data-view="trends">Trends</button>
+        </div>
+        <button class="btn btn-pill" id="copy-btn" title="Copy yesterday's tasks">
+          <span class="copy-txt">Copy yesterday</span>
+          <span class="copy-ico" aria-hidden="true">⟳</span>
+        </button>
+        <button class="btn btn-sq" id="sync-btn"  title="Sync settings">☁️</button>
+        <button class="btn btn-sq" id="dark-btn"  title="Toggle dark mode">☀️</button>
+        <button class="btn btn-sq" id="prev-btn"  aria-label="Previous day">←</button>
+        <button class="btn btn-sq" id="next-btn"  aria-label="Next day">→</button>
+      </div>
+    </nav>
+
+    <!-- ─── Day view ─────────────────────────────── -->
+    <div class="day-view" id="day-view">
+
+      <!-- Score strip -->
+      <div class="score-strip">
+        <div>
+          <div class="score-pct" id="sc-pct">—</div>
+          <div class="score-lbl">daily score</div>
+        </div>
+        <div class="score-right">
+          <div class="sc-stat">
+            <div class="sc-val" id="sc-h">0/0</div>
+            <div class="sc-key">habits</div>
+          </div>
+          <div class="sc-stat">
+            <div class="sc-val" id="sc-t">0/0</div>
+            <div class="sc-key">tasks</div>
+          </div>
+          <div class="sc-stat">
+            <div class="sc-val" id="sc-s">—</div>
+            <div class="sc-key">sleep</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Morning / sleep -->
+      <div class="card">
+        <div class="card-head">
+          <h2 class="card-title"><span class="card-ico">🌅</span> Morning</h2>
+        </div>
+        <div class="sleep-row">
+          <div class="sleep-field">
+            <label class="sleep-lbl" for="slept">Slept at</label>
+            <input class="sleep-inp" id="slept" type="text" placeholder="10:30pm" maxlength="10" autocomplete="off" />
+          </div>
+          <div class="sleep-field">
+            <label class="sleep-lbl" for="woke">Woke up</label>
+            <input class="sleep-inp" id="woke" type="text" placeholder="6:30am" maxlength="10" autocomplete="off" />
+          </div>
+        </div>
+        <p class="sleep-dur" id="sleep-dur"></p>
+      </div>
+
+      <!-- Focus + tasks -->
+      <div class="card">
+        <div class="card-head">
+          <h2 class="card-title"><span class="card-ico">📋</span> Focus &amp; Tasks</h2>
+        </div>
+
+        <div class="goal-area">
+          <label class="goal-label" for="main-goal">Main goal for today</label>
+          <input class="goal-inp" id="main-goal" type="text" placeholder="What's the one thing that matters most?" autocomplete="off" />
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- Pinned recurring tasks -->
+        <div class="pinned-section" id="pinned-section">
+          <p class="pinned-label">📌 Daily recurring</p>
+          <div class="pinned-tasks" id="pinned-list"></div>
+          <div class="add-pin-row">
+            <input class="add-pin-inp" id="add-pin-inp" type="text" placeholder="Add recurring task…" maxlength="100" />
+            <button class="add-pin-btn" id="add-pin-btn" aria-label="Add recurring task">+</button>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- Daily tasks -->
+        <div class="tasks-area" id="tasks-list"></div>
+        <div class="add-task-row">
+          <input class="add-task-inp" id="add-task-inp" type="text" placeholder="Add a task for today…" maxlength="120" />
+          <button class="add-task-btn" id="add-task-btn" aria-label="Add task">+</button>
+        </div>
+      </div>
+
+      <!-- Meals -->
+      <div class="card">
+        <div class="card-head">
+          <h2 class="card-title"><span class="card-ico">🍽</span> Meals</h2>
+        </div>
+        <div class="meals-area">
+          <div class="meal-row">
+            <label class="meal-lbl" for="m-breakfast">Breakfast</label>
+            <input class="meal-inp" id="m-breakfast" type="text" placeholder="What did you eat?" autocomplete="off" />
+          </div>
+          <div class="meal-row">
+            <label class="meal-lbl" for="m-lunch">Lunch</label>
+            <input class="meal-inp" id="m-lunch" type="text" autocomplete="off" />
+          </div>
+          <div class="meal-row">
+            <label class="meal-lbl" for="m-dinner">Dinner</label>
+            <input class="meal-inp" id="m-dinner" type="text" autocomplete="off" />
+          </div>
+          <div class="meal-row">
+            <label class="meal-lbl" for="m-snacks">Snacks</label>
+            <input class="meal-inp" id="m-snacks" type="text" autocomplete="off" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Habits -->
+      <div class="card">
+        <div class="card-head">
+          <h2 class="card-title"><span class="card-ico">✅</span> Habits</h2>
+        </div>
+        <div class="habits-area" id="habits-list"></div>
+        <div class="add-habit-row">
+          <button class="emoji-pick" id="emoji-pick-btn" aria-label="Pick emoji">⭐</button>
+          <input class="add-habit-inp" id="add-habit-inp" type="text" placeholder="Add a habit…" maxlength="60" />
+          <button class="add-habit-btn" id="add-habit-btn" aria-label="Add habit">+</button>
+        </div>
+      </div>
+
+      <!-- Notes / scratchpad -->
+      <div class="card">
+        <div class="card-head">
+          <h2 class="card-title"><span class="card-ico">📝</span> Notes</h2>
+        </div>
+        <div class="notes-area">
+          <textarea class="notes-ta" id="notes-ta" placeholder="Brain dump, ideas, thoughts, anything…"></textarea>
+        </div>
+      </div>
+
+      <!-- End of day -->
+      <div class="card">
+        <div class="card-head">
+          <h2 class="card-title"><span class="card-ico">🌙</span> End of Day</h2>
+        </div>
+        <div class="eod-area">
+          <div>
+            <label class="eod-lbl" for="eod-win">Today's win</label>
+            <input class="eod-inp" id="eod-win" type="text" placeholder="What went well today?" autocomplete="off" />
+          </div>
+          <div>
+            <label class="eod-lbl" for="eod-tmr">Tomorrow's focus</label>
+            <input class="eod-inp" id="eod-tmr" type="text" placeholder="What's the #1 priority tomorrow?" autocomplete="off" />
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /day-view -->
+
+
+    <!-- ─── Week view ─────────────────────────────── -->
+    <div class="week-view" id="week-view">
+      <div class="week-grid"         id="week-grid"></div>
+      <div class="week-summary"      id="week-summary"></div>
+      <div class="habit-week-table"  id="habit-week-table"></div>
+    </div>
+
+
+    <!-- ─── Trends view ───────────────────────────── -->
+    <div class="trends-view" id="trends-view">
+
+      <div class="trend-stat-grid" id="trend-stats"></div>
+
+      <div class="chart-card full">
+        <p class="chart-lbl">Daily score — last 30 days</p>
+        <canvas id="score-chart" height="130"></canvas>
+      </div>
+
+      <div class="trends-grid">
+        <div class="chart-card">
+          <p class="chart-lbl">Sleep duration</p>
+          <canvas id="sleep-chart" height="150"></canvas>
+        </div>
+        <div class="chart-card">
+          <p class="chart-lbl">Habit completions</p>
+          <canvas id="habit-chart" height="150"></canvas>
+        </div>
+      </div>
+
+      <!-- Reminders -->
+      <div class="card">
+        <div class="card-head">
+          <h2 class="card-title"><span class="card-ico">🔔</span> Reminders</h2>
+        </div>
+        <div class="reminder-area">
+          <div class="reminder-row">
+            <div>
+              <p class="reminder-title">Morning check-in</p>
+              <p class="reminder-sub">Fill in your day</p>
+            </div>
+            <div class="reminder-right">
+              <input class="time-inp-sm" type="time" id="rem-morning-time" value="08:00" />
+              <label class="toggle">
+                <input type="checkbox" id="rem-morning-on" />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+          <div class="reminder-row">
+            <div>
+              <p class="reminder-title">Evening reflection</p>
+              <p class="reminder-sub">End of day review</p>
+            </div>
+            <div class="reminder-right">
+              <input class="time-inp-sm" type="time" id="rem-evening-time" value="21:00" />
+              <label class="toggle">
+                <input type="checkbox" id="rem-evening-on" />
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+          <p class="notif-status" id="notif-status"></p>
+        </div>
+      </div>
+
+    </div><!-- /trends-view -->
+
+  </div><!-- /page -->
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="app.js"></script>
+
+</body>
+</html>
