@@ -968,14 +968,31 @@ async function sendMagicLink() {
   if (!email) { setAuthMsg('Please enter your email.', 'warn'); return; }
   setAuthMsg('Sending link…');
   try {
+    // Use clean base URL — never include query params or hash
+    const url = window.location.origin + window.location.pathname;
     await fbAuth.sendSignInLinkToEmail(email, {
-      url: window.location.href,
+      url,
       handleCodeInApp: true,
     });
     localStorage.setItem('emailForSignIn', email);
     setAuthMsg('✓ Check your inbox for the sign-in link!', 'ok');
   } catch (e) {
     setAuthMsg(e.message, 'warn');
+  }
+}
+
+async function forgotPassword() {
+  if (!fbAuth) { setAuthMsg('Sync not configured.', 'warn'); return; }
+  const email = document.getElementById('auth-email-pw').value.trim();
+  if (!email) { setAuthMsg('Enter your email above first.', 'warn'); return; }
+  setAuthMsg('Sending reset email…');
+  try {
+    await fbAuth.sendPasswordResetEmail(email);
+    setAuthMsg('✓ Password reset email sent — check your inbox.', 'ok');
+  } catch (e) {
+    const msg = e.code === 'auth/user-not-found'
+      ? 'No account found with that email.' : e.message;
+    setAuthMsg(msg, 'warn');
   }
 }
 
@@ -1109,9 +1126,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         document.getElementById('auth-tab-password').addEventListener('click', () => setAuthTab('password'));
         document.getElementById('auth-tab-magic').addEventListener('click',    () => setAuthTab('magic'));
-        document.getElementById('signin-btn').addEventListener('click',  signInPassword);
-        document.getElementById('create-btn').addEventListener('click',  createAccount);
-        document.getElementById('magic-btn').addEventListener('click',   sendMagicLink);
+        document.getElementById('signin-btn').addEventListener('click',    signInPassword);
+        document.getElementById('create-btn').addEventListener('click',    createAccount);
+        document.getElementById('forgot-btn').addEventListener('click',    forgotPassword);
+        document.getElementById('magic-btn').addEventListener('click',     sendMagicLink);
         document.getElementById('signout-btn').addEventListener('click', signOut);
         document.getElementById('auth-email-pw').addEventListener('keydown',    e => { if (e.key === 'Enter') signInPassword(); });
         document.getElementById('auth-password').addEventListener('keydown',    e => { if (e.key === 'Enter') signInPassword(); });
@@ -1140,13 +1158,23 @@ if (!localStorage.getItem(STORAGE_KEY) && window.matchMedia('(prefers-color-sche
 if (initFirebase()) {
   // Handle magic link sign-in if returning from email link
   if (fbAuth.isSignInWithEmailLink(window.location.href)) {
-    let email = localStorage.getItem('emailForSignIn')
+    const email = localStorage.getItem('emailForSignIn')
       || window.prompt('Confirm your email to complete sign-in:');
     if (email) {
-      fbAuth.signInWithEmailLink(email, window.location.href).then(() => {
-        localStorage.removeItem('emailForSignIn');
-        window.history.replaceState({}, document.title, window.location.pathname);
-      }).catch(e => console.warn('Magic link sign-in failed:', e));
+      fbAuth.signInWithEmailLink(email, window.location.href)
+        .then(() => {
+          localStorage.removeItem('emailForSignIn');
+          window.history.replaceState({}, document.title, window.location.pathname);
+        })
+        .catch(e => {
+          console.warn('Magic link sign-in failed:', e);
+          // Show error in modal after DOM is ready
+          document.addEventListener('DOMContentLoaded', () => {
+            openSyncModal();
+            setAuthTab('magic');
+            setAuthMsg('Magic link sign-in failed — please try again.', 'warn');
+          }, { once: true });
+        });
     }
   }
 
