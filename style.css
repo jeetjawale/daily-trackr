@@ -218,6 +218,18 @@ body {
   .today-pill { font-size: var(--f-xs); padding: 3px 10px; }
 }
 
+.nav-clock {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  color: var(--text3);
+  flex-shrink: 0;
+  letter-spacing: 0.03em;
+}
+
+@media (min-width: 600px) {
+  .nav-clock { font-size: var(--f-xs); }
+}
+
 .nav-right {
   display: flex;
   align-items: center;
@@ -1816,68 +1828,6 @@ body {
   word-break: break-all;
 }
 
-
-
-/* ============================================================
-   Mood tracker
-   ============================================================ */
-
-.mood-area {
-  padding: 4px var(--cp) 14px;
-}
-
-.mood-label {
-  font-size: var(--f-xs);
-  color: var(--text3);
-  margin-bottom: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-
-.mood-btns {
-  display: flex;
-  gap: 8px;
-  justify-content: space-between;
-}
-
-.mood-btn {
-  flex: 1;
-  background: var(--bg);
-  border: 1.5px solid var(--border);
-  border-radius: 10px;
-  font-size: 22px;
-  padding: 10px 4px;
-  cursor: pointer;
-  transition: border-color 0.15s, background 0.15s, transform 0.1s;
-  -webkit-tap-highlight-color: transparent;
-  line-height: 1;
-}
-
-.mood-btn:hover  { border-color: var(--text2); }
-.mood-btn:active { transform: scale(0.93); }
-
-.mood-btn.selected {
-  border-color: var(--text);
-  background: var(--text);
-  filter: none;
-}
-
-@media (min-width: 600px) {
-  .mood-btn { font-size: 26px; padding: 12px 4px; }
-}
-
-
-/* ============================================================
-   Export / Import row
-   ============================================================ */
-
-.auth-export-row {
-  display: flex;
-  gap: 8px;
-  margin-top: 8px;
-}
-
-.auth-export-row .modal-btn { flex: 1; margin: 0; }
 
 
 /* ============================================================
