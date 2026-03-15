@@ -273,6 +273,18 @@ function calcScore(dateStr) {
   : 0;
 }
 
+// A day counts as "logged" only if the user actually entered something
+function hasData(dateStr) {
+  const d = db[dateStr];
+  if (!d) return false;
+  const hasTasks   = (d.tasks ?? []).some(t => t.text?.trim());
+  const hasHabits  = habits.some(h => d.habits?.[h.id]);
+  const hasSleep   = d.slept?.trim() || d.woke?.trim();
+  const hasMeals   = Object.values(d.meals ?? {}).some(v => v?.trim());
+  const hasContent = d.goal?.trim() || d.notes?.trim() || d.win?.trim() || d.tmr?.trim();
+  return !!(hasTasks || hasHabits || hasSleep || hasMeals || hasContent);
+}
+
 
 // ─── Day render ────────────────────────────────────────────
 
@@ -597,7 +609,7 @@ function renderWeek() {
     data-jump="${d}" style="animation-delay:${i * 0.04}s">
     <div class="wdc-dow">${DOW[i]}</div>
     <div class="wdc-date">${new Date(d + 'T12:00:00').getDate()}</div>
-    <div class="wdc-score">${data ? score + '%' : '—'}</div>
+    <div class="wdc-score">${hasData(d) ? score + '%' : '—'}</div>
     <div class="wdc-dots">${dots}</div>
     </div>`;
   }).join('');
@@ -607,7 +619,7 @@ function renderWeek() {
   });
 
   // Summary bar
-  const loggedDates = dates.filter(d => db[d]);
+  const loggedDates = dates.filter(d => hasData(d));
   const avgScore    = loggedDates.length
   ? Math.round(loggedDates.reduce((a, d) => a + calcScore(d), 0) / loggedDates.length)
   : 0;
@@ -677,26 +689,29 @@ function renderTrends() {
   new Date(d + 'T12:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
   );
 
-  // Stats
-  const logged   = days.filter(d => db[d]).length;
+  // Stats — only count days with real content
+  const logged   = days.filter(d => hasData(d)).length;
   const avgScore = logged
-  ? Math.round(scores.filter((_, i) => db[days[i]]).reduce((a, b) => a + b, 0) / logged)
-  : 0;
-  const bestIdx  = scores.reduce((bi, s, i) => s > scores[bi] ? i : bi, 0);
+    ? Math.round(scores.filter((_, i) => hasData(days[i])).reduce((a, b) => a + b, 0) / logged)
+    : 0;
+  const bestIdx  = days.reduce((bi, d, i) => {
+    if (!hasData(d)) return bi;
+    return (bi === -1 || scores[i] > scores[bi]) ? i : bi;
+  }, -1);
   const totalH   = habitCounts.reduce((a, b) => a + b, 0);
 
   document.getElementById('trend-stats').innerHTML = `
   <div class="trend-stat" style="animation-delay:.04s">
-  <div class="ts-val">${avgScore}%</div><div class="ts-key">avg score</div>
+  <div class="ts-val">${logged ? avgScore + '%' : '—'}</div><div class="ts-key">avg score</div>
   </div>
   <div class="trend-stat" style="animation-delay:.08s">
   <div class="ts-val">${logged}/30</div><div class="ts-key">days logged</div>
   </div>
   <div class="trend-stat" style="animation-delay:.12s">
-  <div class="ts-val">${totalH}</div><div class="ts-key">habits done</div>
+  <div class="ts-val">${logged ? totalH : '—'}</div><div class="ts-key">habits done</div>
   </div>
   <div class="trend-stat" style="animation-delay:.16s">
-  <div class="ts-val">${logged ? labels[bestIdx] : '—'}</div><div class="ts-key">best day</div>
+  <div class="ts-val">${bestIdx >= 0 ? labels[bestIdx] : '—'}</div><div class="ts-key">best day</div>
   </div>
   `;
 

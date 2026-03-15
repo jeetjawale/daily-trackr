@@ -325,7 +325,7 @@ body {
   background: rgba(0, 0, 0, 0.4);
   animation: fadeIn 0.15s ease;
 }
-
+.hidden { display: none !important; }
 .modal-overlay.hidden { display: none; }
 
 @media (min-width: 600px) { .modal-overlay { align-items: center; } }
