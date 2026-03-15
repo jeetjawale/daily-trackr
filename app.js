@@ -572,7 +572,7 @@ function updateScoreStrip() {
   const denom      = habits.length + (filled || 0) + pinnedTasks.length;
   const pct        = denom > 0 ? Math.round((habitsDone + tasksDone + pinnedDone) / denom * 100) : 0;
 
-  document.getElementById('sc-pct').textContent = pct + '%';
+  document.getElementById('sc-pct').textContent = hasData(currentDay) ? pct + '%' : '—';
   document.getElementById('sc-h').textContent   = habitsDone + '/' + habits.length;
   document.getElementById('sc-t').textContent   = (tasksDone + pinnedDone) + '/' + (filled + pinnedTasks.length || 0);
 
@@ -628,7 +628,7 @@ function renderWeek() {
   : 0;
 
   document.getElementById('week-summary').innerHTML = `
-  <div class="ws-stat"><div class="ws-val">${avgScore}%</div><div class="ws-key">avg score</div></div>
+  <div class="ws-stat"><div class="ws-val">${loggedDates.length ? avgScore + '%' : '—'}</div><div class="ws-key">avg score</div></div>
   <div class="ws-stat"><div class="ws-val">${loggedDates.length}/7</div><div class="ws-key">days logged</div></div>
   <div class="ws-stat"><div class="ws-val">${bestStreak > 0 ? '🔥 ' : ''}${bestStreak}d</div><div class="ws-key">best streak</div></div>
   `;
@@ -666,9 +666,10 @@ function jumpToDay(dateStr) {
 
 function renderTrends() {
   const days   = getLast30();
-  const scores = days.map(d => calcScore(d));
+  const scores = days.map(d => hasData(d) ? calcScore(d) : null);
 
   const sleepHours = days.map(d => {
+    if (!hasData(d)) return null;
     const data = db[d];
     if (!data) return null;
     const s = parseFuzzyTime(data.slept);
@@ -680,8 +681,9 @@ function renderTrends() {
   });
 
   const habitCounts = days.map(d => {
+    if (!hasData(d)) return null;
     const data = db[d];
-    if (!data) return 0;
+    if (!data) return null;
     return habits.filter(h => data.habits?.[h.id]).length;
   });
 
@@ -796,6 +798,7 @@ function renderTrends() {
         backgroundColor: barColor,
         borderRadius: 3,
         borderSkipped: false,
+        spanGaps: true,
       }],
     },
     options: {
@@ -1012,7 +1015,8 @@ function copyYesterday() {
   if (!src) { alert('No data from yesterday.'); return; }
 
   const d    = getDay(currentDay);
-  d.tasks    = (src.tasks ?? [{ text: '', done: false }]).map(t => ({ text: t.text, done: false }));
+  const copied = (src.tasks ?? []).filter(t => t.text?.trim()).map(t => ({ text: t.text, done: false }));
+  d.tasks    = copied.length ? copied : [{ text: '', done: false }];
   d.meals    = { ...(src.meals ?? {}) };
   d.goal     = src.goal ?? '';
   touch();
