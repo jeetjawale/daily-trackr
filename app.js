@@ -994,40 +994,39 @@ async function deleteAccount() {
   );
   if (!confirmed) return;
 
-  // Check how the user signed in
-  const providers = fbUser.providerData.map(p => p.providerId);
-  const isEmailLink = providers.includes('emailLink');
-  const isPassword  = providers.includes('password');
-
+  // Determine sign-in method reliably:
+  // Firebase lumps email/password AND email-link under the same 'password' provider ID,
+  // so providerData is not trustworthy. Instead we check if the user has a password
+  // by looking at sign-in methods for their email.
   setAuthMsg('Verifying identity…');
   closeSyncModal();
 
   try {
-    if (isPassword) {
-      // Password user — prompt for password to re-auth
+    const methods = await fbAuth.fetchSignInMethodsForEmail(fbUser.email);
+    const hasPassword = methods.includes('password');
+
+    if (hasPassword) {
       const pass = window.prompt('Enter your password to confirm account deletion:');
-      if (pass === null) { openSyncModal(); setAuthMsg('', ''); return; }
+      if (pass === null) { openSyncModal(); setAuthMsg(''); return; }
       const credential = firebase.auth.EmailAuthProvider.credential(fbUser.email, pass);
       await fbUser.reauthenticateWithCredential(credential);
+      await performDelete();
 
-    } else if (isEmailLink) {
-      // Magic link user — send a new sign-in link, then delete after they click it
-      const url = window.location.origin + window.location.pathname + '?deleteAccount=1';
+    } else {
+      // Magic link (or no password) — send a delete-confirmation link
+      const url = window.location.origin + window.location.pathname;
       await fbAuth.sendSignInLinkToEmail(fbUser.email, { url, handleCodeInApp: true });
       localStorage.setItem('emailForSignIn', fbUser.email);
       localStorage.setItem('pendingDelete', '1');
       openSyncModal();
       setAuthMsg('✓ Check your email — click the link to confirm deletion.', 'ok');
-      return;
     }
-
-    await performDelete();
 
   } catch (e) {
     const msg = e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential'
       ? 'Wrong password — account not deleted.'
       : e.code === 'auth/requires-recent-login'
-      ? 'Session expired — please sign out and sign back in, then try again.'
+      ? 'Session expired — please sign out and sign in again, then retry.'
       : e.message;
     openSyncModal();
     setAuthMsg(msg, 'warn');
