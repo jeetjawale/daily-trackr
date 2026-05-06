@@ -189,7 +189,6 @@ function touch() {
   }, 700);
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-  boot();
-  bindEvents();
-});
+// --- Execution ---
+boot();
+bindEvents();
