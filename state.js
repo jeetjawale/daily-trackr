@@ -9,19 +9,55 @@ const DEFAULT_HABITS = [
   { id: 'sleep',   icon: '😴', label: 'Slept okay' },
 ];
 
+const DEFAULT_REMINDERS = [
+  { id: 'morning', enabled: false, time: '08:00' },
+  { id: 'evening', enabled: false, time: '21:00' },
+];
+
+const DEFAULT_PROFILE = {
+  initialized: false,
+};
+
+export function createGuestState() {
+  return {
+    db: {},
+    habits: structuredClone(DEFAULT_HABITS),
+    pinnedTasks: [],
+    darkMode: false,
+    nextId: 100,
+    reminders: structuredClone(DEFAULT_REMINDERS),
+  };
+}
+
+export function createAccountDataState() {
+  return {
+    habits: [],
+    pinnedTasks: [],
+    db: {},
+    profile: structuredClone(DEFAULT_PROFILE),
+    darkMode: false,
+    nextId: 100,
+    reminders: structuredClone(DEFAULT_REMINDERS),
+  };
+}
+
 export const state = {
   currentDay: todayStr(),
-  db: {},
-  habits: structuredClone(DEFAULT_HABITS),
-  pinnedTasks: [],
-  darkMode: false,
+  ...createGuestState(),
+  profile: structuredClone(DEFAULT_PROFILE),
   activeView: 'day',
   pickedEmoji: '⭐',
-  nextId: 100,
-  reminders: { morningOn: false, morningTime: '08:00', eveningOn: false, eveningTime: '21:00' },
-  fbUser: null,
+  authView: 'signin',
+  authMode: 'guest',
+  saveState: 'saved',
+  saveText: 'saved ✓',
+  toastMessage: '',
+  toastVisible: false,
+  importPromptOpen: false,
+  pendingImportDecision: false,
+  supabaseUser: null,
   isSyncing: false,
-  authView: 'signin'
+  syncModalOpen: false,
 };
 
 let renderFn = null;

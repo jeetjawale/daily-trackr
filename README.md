@@ -1,6 +1,6 @@
 # Daily Tracker
 
-A lightweight, zero-dependency personal productivity tracker that runs entirely in the browser. Track habits, tasks, sleep, meals, and daily reflections — with optional cross-device sync via Firebase.
+A lightweight, zero-dependency personal productivity tracker that runs entirely in the browser. Track habits, tasks, sleep, meals, and daily reflections — with Supabase sync scaffolding currently being wired in.
 
 ![version](https://img.shields.io/badge/version-2.0.0-blue) ![license](https://img.shields.io/badge/license-MIT-green) ![netlify](https://img.shields.io/badge/build-netlify-brightgreen)
 
@@ -31,8 +31,8 @@ A lightweight, zero-dependency personal productivity tracker that runs entirely 
 
 **Other**
 - 🌗 Dark / light mode (auto-detects system preference on first visit)
-- ☁️ Firebase sync — sign in with email + password or magic link, data syncs automatically
-- 🔔 Browser notifications for morning check-in and evening reflection
+- ☁️ Supabase sync scaffolding — schema, client helper, and browser config are in place; live auth/sync wiring is still in progress
+- 🔔 Browser notification UI is present; reminder scheduling is not fully wired in this intermediate build
 - ⟳ Copy yesterday's tasks and goal to today in one click
 - 💾 Auto-save to `localStorage` with a visible save/sync indicator
 
@@ -47,16 +47,16 @@ git clone https://github.com/jeetjawale/daily-tracker.git
 cd daily-tracker
 ```
 
-For local dev with sync, create `firebase-config.js` in the project root (it's gitignored):
+For local dev with sync, copy `supabase-config.example.js` to `supabase-config.js` in the project root and fill in your project values:
 
 ```js
-window.FIREBASE_CONFIG = {
-  apiKey:      'YOUR_API_KEY',
-  authDomain:  'YOUR_PROJECT.firebaseapp.com',
-  databaseURL: 'https://YOUR_PROJECT-default-rtdb.firebaseio.com',
-  projectId:   'YOUR_PROJECT',
+window.SUPABASE_CONFIG = {
+  url: 'https://YOUR_PROJECT.supabase.co',
+  anonKey: 'YOUR_SUPABASE_ANON_KEY',
 };
 ```
+
+Use the browser anon key only. Do not put a service role key in this file.
 
 Then serve locally:
 
@@ -66,7 +66,7 @@ npx serve .
 python -m http.server 8080
 ```
 
-Without `firebase-config.js`, the app works fully offline — sync is just disabled.
+Without `supabase-config.js`, the app works fully offline. In this intermediate build, live sync is not active yet.
 
 ---
 
@@ -77,71 +77,46 @@ daily-tracker/
 ├── index.html          # App shell and markup
 ├── style.css           # All styles (CSS custom properties, dark mode, responsive)
 ├── app.js              # All app logic (no frameworks, no bundler)
-├── build.js            # Netlify build script — generates firebase-config.js from env vars
+├── supabase.js         # Supabase auth + sync helpers
+├── supabase-schema.sql # Supabase schema + RLS policies
 ├── netlify.toml        # Netlify build config
-├── .gitignore          # Keeps firebase-config.js out of the repo
-└── firebase-config.js  # NOT committed — generated at build time
+├── supabase-config.example.js
+└── supabase-config.js  # Local/project-specific browser config
 ```
 
 ---
 
 ## Sync Setup (one-time, for the developer)
 
-Users just click ☁️ and sign in — no setup on their end. You configure Firebase once.
+This task only adds the Supabase schema and browser configuration contract. Live auth and cloud sync behavior are not fully wired yet.
 
-### 1. Create a Firebase project
+### 1. Create a Supabase project
 
-1. Go to [console.firebase.google.com](https://console.firebase.google.com) → **Add project**
-2. **Build → Authentication → Get started** → enable **Email/Password** and **Email link (passwordless)**
-3. Under Email link, add your Netlify URL to **Authorized domains** (e.g. `daily-tracker-app.netlify.app`)
-4. **Build → Realtime Database → Create database → Start in test mode**
-5. In the **Rules** tab, replace with:
+1. Create a project in [supabase.com](https://supabase.com)
+2. In **Authentication → Providers**, enable **Email**
+3. In **SQL Editor**, run [`supabase-schema.sql`](supabase-schema.sql)
+4. In **Project Settings → API**, copy the project URL and anon key
+5. Create `supabase-config.js` from `supabase-config.example.js` with those values
 
-```json
-{
-  "rules": {
-    "users": {
-      "$uid": {
-        ".read":  "$uid === auth.uid",
-        ".write": "$uid === auth.uid"
-      }
-    }
-  }
-}
-```
-
-### 2. Add environment variables in Netlify
-
-**Site configuration → Environment variables → Add a variable:**
-
-| Variable | Where to find it |
-|---|---|
-| `FIREBASE_API_KEY` | Project Settings → General → Web API Key |
-| `FIREBASE_AUTH_DOMAIN` | `your-project.firebaseapp.com` |
-| `FIREBASE_DATABASE_URL` | Realtime Database → URL at the top |
-| `FIREBASE_PROJECT_ID` | Project Settings → General → Project ID |
-
-### 3. Deploy
+### 2. Deploy
 
 ```bash
 git push
 ```
 
-Netlify runs `node build.js`, which generates `firebase-config.js` from env vars at build time. The file is gitignored — keys never touch the repo.
+Netlify serves the app as static files. If you want to continue wiring cloud sync in later tasks, make sure the deployed site includes a real `supabase-config.js`. The anon key is intended for browser use; do not use a service role key.
 
 ---
 
 ## Browser Notifications
 
-1. Switch to **Trends** view
-2. Toggle on **Morning check-in** and/or **Evening reflection**
-3. Grant notification permission when prompted
+The notification controls are present in the UI, but reminder scheduling is not fully implemented in this intermediate build.
 
 ---
 
 ## Data Storage
 
-All data is saved to `localStorage` under the key `dt-v7`. Nothing is sent anywhere unless you sign in. To back up: DevTools → Application → Local Storage → copy the value.
+All data is saved to `localStorage` under the key `dt-v7`. In this intermediate build, day-to-day usage is still local-first. To back up: DevTools → Application → Local Storage → copy the value.
 
 ---
 
@@ -152,7 +127,7 @@ All data is saved to `localStorage` under the key `dt-v7`. Nothing is sent anywh
 | UI | Vanilla HTML + CSS (CSS custom properties) |
 | Logic | Vanilla JavaScript (ES2020, no frameworks) |
 | Charts | [Chart.js 4.4](https://www.chartjs.org/) via CDN |
-| Sync | [Firebase Auth + Realtime Database](https://firebase.google.com) via CDN |
+| Sync | [Supabase Auth + Postgres](https://supabase.com) via CDN |
 | Fonts | [DM Sans + DM Mono](https://fonts.google.com/) via Google Fonts |
 | Hosting | [Netlify](https://netlify.com) |
 
