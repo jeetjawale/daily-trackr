@@ -98,6 +98,10 @@ async function boot() {
   updateSyncStatus();
   startClock();
 
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js').catch(err => console.warn('SW registration failed', err));
+  }
+
   if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
     scheduleReminders();
   }
