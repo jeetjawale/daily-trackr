@@ -1,16 +1,17 @@
 // Daily Tracker — Service Worker
-// Cache-first strategy for app shell, network-first for Firebase
+// Cache-first strategy for app shell, network-first for sync
 
-const CACHE_NAME = 'daily-tracker-v1';
+const CACHE_NAME = 'daily-tracker-v2';
 
 const APP_SHELL = [
   '/',
   '/index.html',
   '/app.js',
   '/style.css',
-  '/firebase-config.js',
+  '/supabase-config.js',
   'https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap',
   'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js',
+  'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2'
 ];
 
 // Install — cache app shell
@@ -31,16 +32,15 @@ self.addEventListener('activate', event => {
   self.clients.claim();
 });
 
-// Fetch — cache-first for app shell, network-first for Firebase/CDN APIs
+// Fetch — cache-first for app shell, network-first for Supabase/CDN APIs
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
 
-  // Skip non-GET and Firebase API requests (always network)
+  // Skip non-GET and API requests (always network)
   if (event.request.method !== 'GET') return;
-  if (url.hostname.includes('firebaseio.com') ||
+  if (url.hostname.includes('supabase.co') ||
       url.hostname.includes('googleapis.com') ||
-      url.hostname.includes('gstatic.com') ||
-      url.hostname.includes('firebaseapp.com')) return;
+      url.hostname.includes('gstatic.com')) return;
 
   event.respondWith(
     caches.match(event.request).then(cached => {
