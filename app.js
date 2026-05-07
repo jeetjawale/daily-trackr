@@ -316,7 +316,20 @@ function touch() {
   setSaveState('saving', 'saving…');
   setTimeout(async () => {
     saveLocalState();
-    setSaveState('saved', 'saved ✓');
+    
+    if (state.authMode === 'account') {
+      try {
+        const currentEntry = getDay(state.db, state.currentDay);
+        await upsertEntry(state.currentDay, currentEntry);
+        setSaveState('saved', 'saved ✓');
+      } catch (err) {
+        console.error('Sync failed', err);
+        setSaveState('error', 'sync error');
+        showToast('Cloud sync failed');
+      }
+    } else {
+      setSaveState('saved', 'saved ✓');
+    }
   }, 700);
 }
 
