@@ -167,11 +167,78 @@ function bindWindowEvents() {
 }
 
 async function handleSignIn() {
-  showUnsupportedSyncToast();
+  const emailInp = document.getElementById('si-email');
+  const passInp = document.getElementById('si-pass');
+  const btn = document.getElementById('si-submit');
+  
+  if (!emailInp.value || !passInp.value) return showToast('Email and password required');
+  
+  const originalText = btn.textContent;
+  btn.textContent = 'Signing In...';
+  btn.disabled = true;
+
+  try {
+    const authData = await signIn(emailInp.value, passInp.value);
+    
+    if (hasGuestData() && confirm('We found guest data on this device. Do you want to import it into your account? This will overwrite your cloud data.')) {
+      const newState = await replaceAllUserDataFromLocal(state);
+      Object.assign(state, newState);
+    } else {
+      const newState = await loadRemoteBootstrap();
+      Object.assign(state, newState);
+    }
+    
+    state.authMode = 'account';
+    state.authView = 'account';
+    saveLocalState();
+    
+    emailInp.value = '';
+    passInp.value = '';
+    showToast('Signed in successfully');
+    window.location.reload();
+  } catch (err) {
+    showToast(err.message);
+  } finally {
+    btn.textContent = originalText;
+    btn.disabled = false;
+  }
 }
 
 async function handleRegister() {
-  showUnsupportedSyncToast();
+  const emailInp = document.getElementById('reg-email');
+  const passInp = document.getElementById('reg-pass');
+  const confirmInp = document.getElementById('reg-pass-confirm');
+  const btn = document.getElementById('reg-submit');
+  
+  if (!emailInp.value || !passInp.value || !confirmInp.value) return showToast('All fields required');
+  
+  const originalText = btn.textContent;
+  btn.textContent = 'Creating Account...';
+  btn.disabled = true;
+
+  try {
+    await signUp(emailInp.value, passInp.value, confirmInp.value);
+    
+    if (hasGuestData()) {
+      const newState = await replaceAllUserDataFromLocal(state);
+      Object.assign(state, newState);
+    }
+    
+    state.authMode = 'account';
+    state.authView = 'account';
+    saveLocalState();
+    
+    emailInp.value = '';
+    passInp.value = '';
+    confirmInp.value = '';
+    showToast('Account created successfully');
+    window.location.reload();
+  } catch (err) {
+    showToast(err.message);
+  } finally {
+    btn.textContent = originalText;
+    btn.disabled = false;
+  }
 }
 
 function addTask() {
