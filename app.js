@@ -152,12 +152,40 @@ function bindEvents() {
   document.getElementById('acc-clear-local').addEventListener('click', clearLocalAndNotify);
   document.getElementById('si-submit').addEventListener('click', handleSignIn);
   document.getElementById('reg-submit').addEventListener('click', handleRegister);
-  document.getElementById('fp-submit').addEventListener('click', showUnsupportedSyncToast);
+  document.getElementById('fp-submit').addEventListener('click', async () => {
+    const email = document.getElementById('fp-email').value;
+    if (!email) return showToast('Email required');
+    try { await sendPasswordReset(email); showToast('Reset email sent'); document.getElementById('fp-email').value = ''; } 
+    catch (err) { showToast(err.message); }
+  });
   document.getElementById('acc-change-pass').addEventListener('click', () => showAuthView('change-pass'));
-  document.getElementById('acc-signout').addEventListener('click', showUnsupportedSyncToast);
+  document.getElementById('acc-signout').addEventListener('click', async () => {
+    try {
+      await signOut();
+      clearLocalAndNotify();
+    } catch (err) { showToast(err.message); }
+  });
   document.getElementById('acc-delete').addEventListener('click', () => showAuthView('delete'));
-  document.getElementById('cp-submit').addEventListener('click', showUnsupportedSyncToast);
-  document.getElementById('del-submit').addEventListener('click', showUnsupportedSyncToast);
+  document.getElementById('cp-submit').addEventListener('click', async () => {
+    const current = document.getElementById('cp-current').value;
+    const newPass = document.getElementById('cp-new').value;
+    const confirm = document.getElementById('cp-confirm').value;
+    try {
+      await changePassword(current, newPass, confirm);
+      showToast('Password updated');
+      showAuthView('account');
+    } catch (err) { showToast(err.message); }
+  });
+  document.getElementById('del-submit').addEventListener('click', async () => {
+    const pass = document.getElementById('del-pass').value;
+    if (!pass) return showToast('Password required');
+    try {
+      const session = await getCurrentSession();
+      if (session) await signIn(session.user.email, pass);
+      await deleteAllUserData();
+      clearLocalAndNotify();
+    } catch (err) { showToast(err.message); }
+  });
 }
 
 function bindWindowEvents() {
