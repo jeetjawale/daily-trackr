@@ -232,6 +232,50 @@ function bindEvents() {
   document.getElementById('rem-evening-on').addEventListener('change', e => {
     updateReminder('evening', { enabled: e.target.checked });
   });
+
+  // Window bridge for ui.js HTML handlers
+  window.toggleTask = toggleTask;
+  window.deleteTask = deleteTask;
+  window.toggleHabit = toggleHabit;
+  window.togglePinnedTask = togglePinnedTask;
+  window.deletePinnedTask = deletePinnedTask;
+}
+
+function toggleTask(i) {
+  const d = getDay(state.db, state.currentDay);
+  d.tasks[i].done = !d.tasks[i].done;
+  setState('db', state.db);
+  touch();
+}
+
+function deleteTask(i) {
+  const d = getDay(state.db, state.currentDay);
+  d.tasks.splice(i, 1);
+  setState('db', state.db);
+  touch();
+}
+
+function toggleHabit(id) {
+  const d = getDay(state.db, state.currentDay);
+  if (!d.habits) d.habits = {};
+  d.habits[id] = !d.habits[id];
+  setState('db', state.db);
+  touch();
+}
+
+function togglePinnedTask(id) {
+  const d = getDay(state.db, state.currentDay);
+  if (!d.pinnedDone) d.pinnedDone = {};
+  d.pinnedDone[id] = !d.pinnedDone[id];
+  setState('db', state.db);
+  touch();
+}
+
+function deletePinnedTask(id) {
+  if (!confirm('Remove this recurring task from all days?')) return;
+  state.pinnedTasks = state.pinnedTasks.filter(t => t.id !== id);
+  setState('pinnedTasks', state.pinnedTasks);
+  touch();
 }
 
 function bindWindowEvents() {
