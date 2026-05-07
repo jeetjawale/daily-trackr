@@ -84,6 +84,17 @@ async function boot() {
   showAuthView(state.authView);
   render();
 
+  const morning = state.reminders?.find(r => r.id === 'morning');
+  if (morning) {
+    document.getElementById('rem-morning-time').value = morning.time;
+    document.getElementById('rem-morning-on').checked = morning.enabled;
+  }
+  const evening = state.reminders?.find(r => r.id === 'evening');
+  if (evening) {
+    document.getElementById('rem-evening-time').value = evening.time;
+    document.getElementById('rem-evening-on').checked = evening.enabled;
+  }
+
   updateSyncStatus();
   startClock();
 
@@ -106,8 +117,26 @@ function startClock() {
 }
 
 function scheduleReminders() {
-  // Migration of scheduleReminders logic from original app.js
-  // uses state.reminders
+  if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+
+  const checkReminders = () => {
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
+    
+    const morning = state.reminders?.find(r => r.id === 'morning');
+    const evening = state.reminders?.find(r => r.id === 'evening');
+
+    if (morning?.enabled && morning.time === timeStr && now.getSeconds() === 0) {
+      new Notification("Morning check-in", { body: "Time to plan your day!" });
+    }
+    
+    if (evening?.enabled && evening.time === timeStr && now.getSeconds() === 0) {
+      new Notification("Evening reflection", { body: "How did today go?" });
+    }
+  };
+
+  // Check every second to hit the 00 second mark exactly
+  setInterval(checkReminders, 1000);
 }
 
 // --- Event Bindings ---
@@ -185,6 +214,19 @@ function bindEvents() {
       await deleteAllUserData();
       clearLocalAndNotify();
     } catch (err) { showToast(err.message); }
+  });
+
+  document.getElementById('rem-morning-time').addEventListener('change', e => {
+    updateReminder('morning', { time: e.target.value });
+  });
+  document.getElementById('rem-morning-on').addEventListener('change', e => {
+    updateReminder('morning', { enabled: e.target.checked });
+  });
+  document.getElementById('rem-evening-time').addEventListener('change', e => {
+    updateReminder('evening', { time: e.target.value });
+  });
+  document.getElementById('rem-evening-on').addEventListener('change', e => {
+    updateReminder('evening', { enabled: e.target.checked });
   });
 }
 
@@ -310,6 +352,24 @@ function copyYesterday() {
   d.goal = src.goal ?? '';
   setState('db', state.db);
   touch();
+}
+
+function updateReminder(id, patch) {
+  if (!state.reminders) state.reminders = [];
+  let rem = state.reminders.find(r => r.id === id);
+  if (!rem) {
+    rem = { id, enabled: false, time: id === 'morning' ? '08:00' : '21:00' };
+    state.reminders.push(rem);
+  }
+  Object.assign(rem, patch);
+  setState('reminders', state.reminders);
+  touch();
+  
+  if (typeof Notification !== 'undefined' && Notification.permission !== 'granted' && patch.enabled) {
+    Notification.requestPermission().then(perm => {
+      if (perm === 'granted') scheduleReminders();
+    });
+  }
 }
 
 function touch() {
