@@ -1,14 +1,70 @@
 // app.js - Main Entry Point
 import { state, setState, setRenderFn } from './state.js';
-import { todayStr, shiftDay, formatDay, esc } from './utils.js';
-import { loadFromStorage, saveToStorage, getDay, clearLocalData } from './storage.js';
-import { initFirebase, pushToCloud, pullFromCloud, signIn, register, sendPasswordReset, changePassword, signOut, deleteAccount, getAuth } from './firebase.js';
-import { render, showToast, setSaveState, applyTheme, setView, updateSyncStatus, openSyncModal, closeSyncModal, showAuthView, updateNotifStatus } from './ui.js';
+import { todayStr, shiftDay } from './utils.js';
+import { loadGuestState, saveGuestState, loadAccountCache, saveAccountCache, getDay, clearGuestState, clearAccountCache, hasGuestData } from './storage.js';
+import { 
+  initSupabase, 
+  getCurrentSession, 
+  signIn, 
+  signUp, 
+  signOut, 
+  sendPasswordReset, 
+  changePassword, 
+  loadRemoteBootstrap, 
+  upsertEntry, 
+  replaceAllUserDataFromLocal, 
+  deleteAllUserData 
+} from './supabase.js';
+import { render, showToast, setSaveState, applyTheme, setView, updateSyncStatus, openSyncModal, closeSyncModal, showAuthView } from './ui.js';
+
+let syncConfigured = false;
+
+function showUnsupportedSyncToast() {
+  showToast(syncConfigured
+    ? 'Sync wiring is present, but auth actions are not available yet in this build.'
+    : 'Sync is not configured in this build.');
+}
+
+function clearLocalAndNotify() {
+  clearGuestState();
+  clearAccountCache();
+  window.location.reload();
+}
+
+async function loadLocalState() {
+  const accountCache = loadAccountCache();
+  if (accountCache && syncConfigured) {
+    try {
+      const session = await getCurrentSession();
+      if (session?.user) {
+        state.authMode = 'account';
+        return accountCache;
+      }
+    } catch (e) {
+      console.warn('Failed to validate cached account session:', e);
+    }
+  }
+
+  if (accountCache) {
+    clearAccountCache();
+  }
+
+  state.authMode = 'guest';
+  return loadGuestState();
+}
+
+function saveLocalState() {
+  return state.authMode === 'account'
+    ? saveAccountCache(state)
+    : saveGuestState(state);
+}
 
 // --- Boot Sequence ---
-function boot() {
+async function boot() {
+  syncConfigured = initSupabase();
+
   // 1. Load local data
-  const saved = loadFromStorage();
+  const saved = await loadLocalState();
   if (saved) {
     state.db = saved.db ?? {};
     state.habits = saved.habits ?? state.habits;
@@ -16,38 +72,22 @@ function boot() {
     state.darkMode = saved.darkMode ?? false;
     state.nextId = saved.nextId ?? 100;
     state.reminders = saved.reminders ?? state.reminders;
+    state.profile = saved.profile ?? state.profile;
   }
 
   // 2. Set render loop
   setRenderFn(render);
 
   // 3. Initial UI sync
+  applyTheme();
+  setSaveState(state.saveState, state.saveText);
+  showAuthView(state.authView);
   render();
-
-  // 4. Firebase Init
-  if (initFirebase()) {
-    const auth = getAuth();
-    auth.onAuthStateChanged(async user => {
-      setState('fbUser', user);
-      if (user) {
-        setSaveState('syncing', 'syncing…');
-        const pulled = await pullFromCloud();
-        saveToStorage(state);
-        render();
-        setSaveState(pulled ? 'synced' : 'saved', pulled ? 'synced ✓' : 'saved ✓');
-        if (!pulled) await pushToCloud();
-      } else {
-        render();
-      }
-    });
-  } else {
-    render();
-  }
 
   updateSyncStatus();
   startClock();
 
-  if (Notification.permission === 'granted') {
+  if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
     scheduleReminders();
   }
 }
@@ -103,33 +143,35 @@ function bindEvents() {
 
   document.getElementById('modal-close-btn').addEventListener('click', closeSyncModal);
 
-  // Auth listeners...
+  document.getElementById('si-to-forgot').addEventListener('click', () => showAuthView('forgot'));
+  document.getElementById('si-to-register').addEventListener('click', () => showAuthView('register'));
+  document.getElementById('auth-back-btn').addEventListener('click', () => {
+    showAuthView(state.authMode === 'account' ? 'account' : 'signin');
+  });
+  document.getElementById('si-clear-local').addEventListener('click', clearLocalAndNotify);
+  document.getElementById('acc-clear-local').addEventListener('click', clearLocalAndNotify);
   document.getElementById('si-submit').addEventListener('click', handleSignIn);
   document.getElementById('reg-submit').addEventListener('click', handleRegister);
-  // ... other auth listeners
+  document.getElementById('fp-submit').addEventListener('click', showUnsupportedSyncToast);
+  document.getElementById('acc-change-pass').addEventListener('click', () => showAuthView('change-pass'));
+  document.getElementById('acc-signout').addEventListener('click', showUnsupportedSyncToast);
+  document.getElementById('acc-delete').addEventListener('click', () => showAuthView('delete'));
+  document.getElementById('cp-submit').addEventListener('click', showUnsupportedSyncToast);
+  document.getElementById('del-submit').addEventListener('click', showUnsupportedSyncToast);
+}
+
+function bindWindowEvents() {
+  window.addEventListener('app-toast', e => {
+    showToast(typeof e.detail === 'string' ? e.detail : 'Something went wrong.');
+  });
 }
 
 async function handleSignIn() {
-  const email = document.getElementById('si-email').value.trim();
-  const pass  = document.getElementById('si-pass').value;
-  try {
-    await signIn(email, pass);
-    closeSyncModal();
-  } catch (e) {
-    showToast(e.message);
-  }
+  showUnsupportedSyncToast();
 }
 
 async function handleRegister() {
-  const email = document.getElementById('reg-email').value.trim();
-  const pass  = document.getElementById('reg-pass').value;
-  const conf  = document.getElementById('reg-pass-confirm').value;
-  try {
-    await register(email, pass, conf);
-    closeSyncModal();
-  } catch (e) {
-    showToast(e.message);
-  }
+  showUnsupportedSyncToast();
 }
 
 function addTask() {
@@ -178,17 +220,24 @@ function copyYesterday() {
 function touch() {
   setSaveState('saving', 'saving…');
   setTimeout(async () => {
-    saveToStorage(state);
-    if (state.fbUser) {
-      setSaveState('syncing', 'syncing…');
-      await pushToCloud();
-      setSaveState('synced', 'synced ✓');
-    } else {
-      setSaveState('saved', 'saved ✓');
-    }
+    saveLocalState();
+    setSaveState('saved', 'saved ✓');
   }, 700);
 }
 
 // --- Execution ---
-boot();
-bindEvents();
+let started = false;
+
+async function startApp() {
+  if (started) return;
+  started = true;
+  bindWindowEvents();
+  bindEvents();
+  await boot();
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', startApp, { once: true });
+} else {
+  startApp();
+}
