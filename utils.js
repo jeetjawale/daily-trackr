@@ -58,8 +58,26 @@ export function parseFuzzyTime(raw) {
   let h = parseInt(parts[0]);
   let m = parseInt(parts[1]) || 0;
   if (isNaN(h)) return null;
+  if (h === 24) h = 0;
   if (h > 23 || m > 59) return null;
   if (pm && h < 12) h += 12;
   if (am && h === 12) h = 0;
   return h * 60 + m;
+}
+
+export function formatFuzzyTime(mins) {
+  if (mins === null || isNaN(mins)) return '';
+  let h = Math.floor(mins / 60);
+  const m = mins % 60;
+  const ampm = h >= 12 ? 'pm' : 'am';
+  h = h % 12;
+  if (h === 0) h = 12;
+  return `${h}:${m.toString().padStart(2, '0')} ${ampm}`;
+}
+
+export function format24h(mins) {
+  if (mins === null || isNaN(mins)) return '00:00';
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
 }

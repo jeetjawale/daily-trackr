@@ -143,9 +143,10 @@ function renderWeek() {
       const isToday = d === todayStr();
       const isSelected = d === state.currentDay;
       const score = getDayScore(d);
+      const isFuture = d > todayStr();
       
       return `
-        <div class="week-day-card ${isToday ? 'today-card' : ''} ${isSelected ? 'selected-card' : ''}" onclick="window.navToDay('${d}')">
+        <div class="week-day-card ${isToday ? 'today-card' : ''} ${isSelected ? 'selected-card' : ''}" ${!isFuture ? `onclick="window.navToDay('${d}')"` : ''} style="${isFuture ? 'cursor:default;opacity:0.4;' : ''}">
           <div class="wdc-dow">${dows[i]}</div>
           <div class="wdc-date">${d.split('-')[2]}</div>
           <div class="wdc-score">${score.pct}%</div>
@@ -157,6 +158,50 @@ function renderWeek() {
         </div>
       `;
     }).join(''));
+  }
+
+  const wddCard = byId('week-day-details-card');
+  if (wddCard && state.currentDay <= todayStr()) {
+    const selDay = state.db[state.currentDay] || { tasks: [], habits: {}, pinnedDone: {}, meals: {} };
+    const pDone = state.pinnedTasks?.filter(p => selDay.pinnedDone?.[p.id]) || [];
+    const pNot = state.pinnedTasks?.filter(p => !selDay.pinnedDone?.[p.id]) || [];
+    const tDone = selDay.tasks?.filter(t => t.done) || [];
+    const tNot = selDay.tasks?.filter(t => !t.done) || [];
+    
+    if (pDone.length > 0 || pNot.length > 0 || tDone.length > 0 || tNot.length > 0 || (selDay.meals && Object.values(selDay.meals).some(v=>v)) || selDay.win || selDay.notes) {
+      let html = `<div class="card" style="margin-top: 9px; padding: 14px;">`;
+      html += `<div style="font-weight: 600; font-size: 14px; margin-bottom: 10px; color: var(--text); border-bottom: 1px solid var(--border); padding-bottom: 6px;">${formatDay(state.currentDay)}</div>`;
+      
+      const renderTasks = (list, isDone, isPinned) => list.map(t => `
+        <div style="display:flex; align-items:center; gap: 8px; margin-bottom: 6px; font-size: 13px; color: ${isDone ? 'var(--text3)' : 'var(--text2)'}; ${isDone ? 'text-decoration: line-through;' : ''}">
+          <div style="width: 14px; height: 14px; border-radius: 4px; border: 1.5px solid ${isDone ? 'var(--text3)' : 'var(--border)'}; display: flex; align-items: center; justify-content: center; font-size: 10px; ${isDone ? 'background: var(--text3); color: var(--bg);' : ''}">${isDone ? '✓' : ''}</div>
+          <div style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${isPinned ? '📌 ' : ''}${esc(t.text)}</div>
+        </div>
+      `).join('');
+
+      html += renderTasks(pNot, false, true);
+      html += renderTasks(tNot, false, false);
+      html += renderTasks(pDone, true, true);
+      html += renderTasks(tDone, true, false);
+
+      if (selDay.meals) {
+        const meals = Object.entries(selDay.meals).filter(([k,v]) => v).map(([k,v]) => `<span style="color:var(--text3); text-transform:capitalize;">${k}:</span> ${esc(v)}`);
+        if (meals.length > 0) {
+          html += `<div style="margin-top: 10px; font-size: 13px; color: var(--text2);">🍽 ${meals.join(' • ')}</div>`;
+        }
+      }
+      
+      if (selDay.win || selDay.notes) {
+         html += `<div style="margin-top: 10px; font-size: 13px; color: var(--text2); font-style: italic; border-left: 2px solid var(--border); padding-left: 8px;">📝 ${esc(selDay.win || selDay.notes)}</div>`;
+      }
+
+      html += `</div>`;
+      updateHTML(wddCard, html);
+    } else {
+      updateHTML(wddCard, '');
+    }
+  } else if (wddCard) {
+    updateHTML(wddCard, '');
   }
 
   // 2. Week Summary
@@ -214,7 +259,10 @@ function renderWeek() {
     let html = `
       <div class="hwt-head" style="grid-template-columns: 1fr ${'24px '.repeat(7)} 40px;">
         <div>Habit</div>
-        ${dows.map(d => `<div style="text-align:center">${d}</div>`).join('')}
+        ${weekDates.map((d, i) => {
+          const isFuture = d > todayStr();
+          return `<div style="text-align:center;${isFuture ? 'opacity:0.4;' : 'cursor:pointer;'}" ${!isFuture ? `onclick="window.navToDay('${d}')"` : ''} title="${isFuture ? '' : `Go to ${d}`}">${dows[i]}</div>`;
+        }).join('')}
         <div style="text-align:right">Strk</div>
       </div>
     `;
@@ -234,11 +282,13 @@ function renderWeek() {
       html += `
         <div class="hwt-row" style="grid-template-columns: 1fr ${'24px '.repeat(7)} 40px;">
           <div class="hwt-habit"><span class="h-ico">${h.icon}</span> <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(h.label)}</span></div>
-          ${weekDates.map(d => `
-            <div class="hwt-dots">
-              <div class="hwt-dot ${state.db[d]?.habits?.[h.id] ? 'done' : ''}">${state.db[d]?.habits?.[h.id] ? '✓' : ''}</div>
+          ${weekDates.map(d => {
+            const isFuture = d > todayStr();
+            return `
+            <div class="hwt-dots" style="${isFuture ? '' : 'cursor:pointer;'}" ${!isFuture ? `onclick="window.toggleHabit('${h.id}', '${d}')"` : ''}>
+              <div class="hwt-dot ${state.db[d]?.habits?.[h.id] ? 'done' : ''}" style="${isFuture ? 'opacity: 0.2;' : ''}">${state.db[d]?.habits?.[h.id] ? '✓' : ''}</div>
             </div>
-          `).join('')}
+          `}).join('')}
           <div class="hwt-streak">${streak}</div>
         </div>
       `;

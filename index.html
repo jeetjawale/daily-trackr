@@ -307,6 +307,7 @@
     <!-- ─── Week view ─────────────────────────────── -->
     <div class="week-view" id="week-view">
       <div class="week-grid"         id="week-grid"></div>
+      <div id="week-day-details-card"></div>
       <div class="week-summary"      id="week-summary"></div>
       <div class="habit-week-table"  id="habit-week-table"></div>
 
@@ -369,7 +370,7 @@
               <p class="reminder-sub">Fill in your day</p>
             </div>
             <div class="reminder-right">
-              <input class="time-inp-sm" type="time" id="rem-morning-time" value="08:00" />
+              <input class="time-inp-sm" type="text" id="rem-morning-time" value="8:00 am" />
               <label class="toggle">
                 <input type="checkbox" id="rem-morning-on" />
                 <span class="toggle-slider"></span>
@@ -382,7 +383,7 @@
               <p class="reminder-sub">End of day review</p>
             </div>
             <div class="reminder-right">
-              <input class="time-inp-sm" type="time" id="rem-evening-time" value="21:00" />
+              <input class="time-inp-sm" type="text" id="rem-evening-time" value="9:00 pm" />
               <label class="toggle">
                 <input type="checkbox" id="rem-evening-on" />
                 <span class="toggle-slider"></span>

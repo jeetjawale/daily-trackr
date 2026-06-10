@@ -1643,7 +1643,7 @@ body {
 }
 
 .time-inp-sm {
-  width: 82px;
+  width: 86px;
   padding: 5px 8px;
   background: var(--bg);
   border: 1.5px solid var(--border);
@@ -1655,7 +1655,7 @@ body {
   transition: border-color 0.15s;
 }
 
-@media (min-width: 600px) { .time-inp-sm { width: 90px; padding: 6px 10px; } }
+@media (min-width: 600px) { .time-inp-sm { width: 95px; padding: 6px 10px; } }
 
 .time-inp-sm:focus { border-color: var(--text2); }
 

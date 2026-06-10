@@ -1,6 +1,6 @@
 // app.js - Main Entry Point
 import { state, setState, setRenderFn, createGuestState } from './state.js';
-import { todayStr, shiftDay } from './utils.js';
+import { todayStr, shiftDay, parseFuzzyTime, formatFuzzyTime } from './utils.js';
 import { loadGuestState, saveGuestState, loadAccountCache, saveAccountCache, getDay, clearGuestState, clearAccountCache, hasGuestData } from './storage.js';
 import { 
   initSupabase, 
@@ -86,12 +86,12 @@ async function boot() {
 
   const morning = state.reminders?.find(r => r.id === 'morning');
   if (morning) {
-    document.getElementById('rem-morning-time').value = morning.time;
+    document.getElementById('rem-morning-time').value = formatFuzzyTime(parseFuzzyTime(morning.time));
     document.getElementById('rem-morning-on').checked = morning.enabled;
   }
   const evening = state.reminders?.find(r => r.id === 'evening');
   if (evening) {
-    document.getElementById('rem-evening-time').value = evening.time;
+    document.getElementById('rem-evening-time').value = formatFuzzyTime(parseFuzzyTime(evening.time));
     document.getElementById('rem-evening-on').checked = evening.enabled;
   }
 
@@ -256,13 +256,27 @@ function bindEvents() {
   });
 
   document.getElementById('rem-morning-time').addEventListener('change', e => {
-    updateReminder('morning', { time: e.target.value });
+    const mins = parseFuzzyTime(e.target.value);
+    if (mins !== null) {
+      e.target.value = formatFuzzyTime(mins);
+      updateReminder('morning', { time: format24h(mins) });
+    } else {
+      const r = state.reminders?.find(x => x.id === 'morning');
+      if (r) e.target.value = formatFuzzyTime(parseFuzzyTime(r.time));
+    }
   });
   document.getElementById('rem-morning-on').addEventListener('change', e => {
     updateReminder('morning', { enabled: e.target.checked });
   });
   document.getElementById('rem-evening-time').addEventListener('change', e => {
-    updateReminder('evening', { time: e.target.value });
+    const mins = parseFuzzyTime(e.target.value);
+    if (mins !== null) {
+      e.target.value = formatFuzzyTime(mins);
+      updateReminder('evening', { time: format24h(mins) });
+    } else {
+      const r = state.reminders?.find(x => x.id === 'evening');
+      if (r) e.target.value = formatFuzzyTime(parseFuzzyTime(r.time));
+    }
   });
   document.getElementById('rem-evening-on').addEventListener('change', e => {
     updateReminder('evening', { enabled: e.target.checked });
@@ -274,12 +288,34 @@ function bindEvents() {
     if (!el) return;
     el.addEventListener('change', e => {
       const d = getDay(state.db, state.currentDay);
+      let val = e.target.value;
+      if (id === 'slept' || id === 'woke') {
+        const parsed = parseFuzzyTime(val);
+        if (parsed !== null) {
+          val = formatFuzzyTime(parsed);
+          e.target.value = val;
+        }
+      }
+      
       if (subKey) {
         if (!d[stateKey]) d[stateKey] = {};
-        d[stateKey][subKey] = e.target.value;
+        d[stateKey][subKey] = val;
       } else {
-        d[stateKey] = e.target.value;
+        d[stateKey] = val;
       }
+      
+      if ((id === 'slept' || id === 'woke') && d.slept && d.woke) {
+         const s = parseFuzzyTime(d.slept);
+         const w = parseFuzzyTime(d.woke);
+         if (s !== null && w !== null) {
+            let mins = w - s;
+            if (mins < 0) mins += 1440;
+            if (mins < 420) {
+                showToast('Try to get at least 7 hours of sleep!');
+            }
+         }
+      }
+
       setState('db', state.db);
       touch();
     });
@@ -306,7 +342,6 @@ function bindEvents() {
   window.navToDay = (dateStr) => {
     state.currentDay = dateStr;
     setState('currentDay', state.currentDay);
-    import('./ui.js').then(m => m.setView('day'));
   };
   window.triggerSave = touch;
 }
@@ -334,8 +369,8 @@ function deleteTask(i) {
   touch();
 }
 
-function toggleHabit(id) {
-  const d = getDay(state.db, state.currentDay);
+function toggleHabit(id, dateStr = state.currentDay) {
+  const d = getDay(state.db, dateStr);
   if (!d.habits) d.habits = {};
   d.habits[id] = !d.habits[id];
   setState('db', state.db);

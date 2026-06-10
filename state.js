@@ -17,7 +17,7 @@ export function createGuestState() {
     db: {},
     habits: structuredClone(DEFAULT_HABITS),
     pinnedTasks: [],
-    darkMode: false,
+    darkMode: window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches,
     nextId: 100,
     reminders: structuredClone(DEFAULT_REMINDERS),
   };
