@@ -1,14 +1,13 @@
 // Daily Tracker — Service Worker
 // Cache-first strategy for app shell, network-first for sync
 
-const CACHE_NAME = 'daily-tracker-v2';
+const CACHE_NAME = 'daily-tracker-v3';
 
 const APP_SHELL = [
   '/',
   '/index.html',
   '/app.js',
   '/style.css',
-  '/supabase-config.js',
   'https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap',
   'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js',
   'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2'

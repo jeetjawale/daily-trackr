@@ -1,5 +1,5 @@
 // app.js - Main Entry Point
-import { state, setState, setRenderFn } from './state.js';
+import { state, setState, setRenderFn, createGuestState } from './state.js';
 import { todayStr, shiftDay } from './utils.js';
 import { loadGuestState, saveGuestState, loadAccountCache, saveAccountCache, getDay, clearGuestState, clearAccountCache, hasGuestData } from './storage.js';
 import { 
@@ -109,38 +109,56 @@ async function boot() {
 
 // --- Clock & Reminders ---
 function startClock() {
-  setInterval(() => {
-    const now = new Date();
-    const el = document.getElementById('nav-clock');
+  const el = document.getElementById('nav-clock');
+  let lastTime = '';
+
+  function tick() {
+    requestAnimationFrame(tick);
     if (!el) return;
-    if (state.currentDay !== todayStr()) { el.textContent = ''; return; }
-    el.textContent = now.toLocaleTimeString('en-IN', {
+    if (state.currentDay !== todayStr()) { 
+      if (lastTime !== '') { el.textContent = ''; lastTime = ''; }
+      return; 
+    }
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString('en-IN', {
       hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true,
     });
-  }, 1000);
+    if (timeStr !== lastTime) {
+      el.textContent = timeStr;
+      lastTime = timeStr;
+    }
+  }
+  requestAnimationFrame(tick);
 }
 
 function scheduleReminders() {
   if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
 
-  const checkReminders = () => {
+  function armNextMinute() {
     const now = new Date();
-    const timeStr = now.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
+    const msUntilNextMinute = 60000 - (now.getSeconds() * 1000 + now.getMilliseconds());
+    setTimeout(checkReminders, msUntilNextMinute);
+  }
+
+  const checkReminders = () => {
+    armNextMinute();
+    
+    const now = new Date();
+    const timeStr = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
     
     const morning = state.reminders?.find(r => r.id === 'morning');
     const evening = state.reminders?.find(r => r.id === 'evening');
 
-    if (morning?.enabled && morning.time === timeStr && now.getSeconds() === 0) {
+    if (morning?.enabled && morning.time === timeStr) {
       new Notification("Morning check-in", { body: "Time to plan your day!" });
     }
     
-    if (evening?.enabled && evening.time === timeStr && now.getSeconds() === 0) {
+    if (evening?.enabled && evening.time === timeStr) {
       new Notification("Evening reflection", { body: "How did today go?" });
     }
   };
 
-  // Check every second to hit the 00 second mark exactly
-  setInterval(checkReminders, 1000);
+  armNextMinute();
 }
 
 // --- Event Bindings ---
@@ -195,7 +213,24 @@ function bindEvents() {
   document.getElementById('acc-signout').addEventListener('click', async () => {
     try {
       await signOut();
-      clearLocalAndNotify();
+      clearAccountCache();
+      Object.assign(state, createGuestState());
+      const saved = await loadGuestState();
+      if (saved) {
+        state.db = saved.db ?? {};
+        state.habits = saved.habits ?? state.habits;
+        state.pinnedTasks = saved.pinnedTasks ?? [];
+        state.darkMode = saved.darkMode ?? false;
+        state.nextId = saved.nextId ?? 100;
+        state.reminders = saved.reminders ?? state.reminders;
+        state.profile = saved.profile ?? state.profile;
+      }
+      state.authMode = 'guest';
+      state.authView = 'signin';
+      state.supabaseUser = null;
+      render();
+      updateSyncStatus();
+      showToast('Signed out successfully');
     } catch (err) { showToast(err.message); }
   });
   document.getElementById('acc-delete').addEventListener('click', () => showAuthView('delete'));
@@ -284,7 +319,13 @@ function bindWindowEvents() {
   });
 }
 
+let lastFailedAt = 0;
+
 async function handleSignIn() {
+  if (Date.now() - lastFailedAt < 5000) {
+    return showToast('Please wait a few seconds before trying again.');
+  }
+
   const emailInp = document.getElementById('si-email');
   const passInp = document.getElementById('si-pass');
   const btn = document.getElementById('si-submit');
@@ -313,12 +354,19 @@ async function handleSignIn() {
     emailInp.value = '';
     passInp.value = '';
     showToast('Signed in successfully');
-    window.location.reload();
+    render();
+    updateSyncStatus();
   } catch (err) {
+    lastFailedAt = Date.now();
     showToast(err.message);
+    setTimeout(() => {
+      btn.disabled = false;
+    }, 5000);
   } finally {
     btn.textContent = originalText;
-    btn.disabled = false;
+    if (Date.now() - lastFailedAt >= 5000) {
+      btn.disabled = false;
+    }
   }
 }
 
@@ -350,7 +398,8 @@ async function handleRegister() {
     passInp.value = '';
     confirmInp.value = '';
     showToast('Account created successfully');
-    window.location.reload();
+    render();
+    updateSyncStatus();
   } catch (err) {
     showToast(err.message);
   } finally {
@@ -420,9 +469,19 @@ function updateReminder(id, patch) {
   }
 }
 
+const tabChannel = new BroadcastChannel('daily_tracker_tabs');
+tabChannel.onmessage = (e) => {
+  if (e.data.type === 'editing' && e.data.day === state.currentDay) {
+    showToast('Another tab is also editing today — last save wins.');
+  }
+};
+
+let saveTimer;
 function touch() {
+  tabChannel.postMessage({ type: 'editing', day: state.currentDay });
+  clearTimeout(saveTimer);
   setSaveState('saving', 'saving…');
-  setTimeout(async () => {
+  saveTimer = setTimeout(async () => {
     saveLocalState();
     
     if (state.authMode === 'account') {

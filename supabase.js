@@ -224,6 +224,15 @@ export async function changePassword(currentOrNewPassword, maybeNewPassword, may
     throw new Error('New passwords do not match.');
   }
 
+  if (maybeNewPassword !== undefined && maybeConfirmPassword !== undefined) {
+    const user = await requireUser();
+    const { error: signInError } = await client.auth.signInWithPassword({
+      email: user.email,
+      password: currentOrNewPassword
+    });
+    if (signInError) throw new Error('Incorrect current password.');
+  }
+
   const { data, error } = await client.auth.updateUser({ password: newPassword });
   if (error) throw new Error(error.message);
 
@@ -256,6 +265,7 @@ export async function loadRemoteBootstrap() {
   const client = requireClient();
   const user = await requireUser();
   const bootstrap = createAccountDataState();
+  const ninetyDaysAgo = new Date(Date.now() - 90 * 86400000).toISOString().slice(0, 10);
 
   const [profile, habitsRes, pinnedRes, entriesRes] = await Promise.all([
     ensureProfile(),
@@ -273,6 +283,7 @@ export async function loadRemoteBootstrap() {
       .from('daily_entries')
       .select('entry_date, slept, woke, goal, tasks, pinned_done, meals, habits, notes, win, tmr')
       .eq('user_id', user.id)
+      .gte('entry_date', ninetyDaysAgo)
       .order('entry_date', { ascending: true }),
   ]);
 

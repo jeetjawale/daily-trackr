@@ -1,11 +1,17 @@
 // ui.js - Minimal DOM UI boundary for app boot
 import { state } from './state.js';
-import { formatDay, todayStr } from './utils.js';
+import { formatDay, todayStr, esc } from './utils.js';
 
 let toastTimer = null;
 
 function byId(id) {
   return document.getElementById(id);
+}
+
+function updateHTML(el, html) {
+  if (el && el.innerHTML !== html) {
+    el.innerHTML = html;
+  }
 }
 
 function getCurrentUser() {
@@ -48,36 +54,36 @@ export function render() {
   // Render Tasks
   const tasksList = byId('tasks-list');
   if (tasksList) {
-    tasksList.innerHTML = (day.tasks || []).map((t, i) => `
+    updateHTML(tasksList, (day.tasks || []).map((t, i) => `
       <div class="task-row">
         <input type="checkbox" ${t.done ? 'checked' : ''} onchange="window.toggleTask(${i})">
         <span class="task-text ${t.done ? 'done' : ''}">${esc(t.text)}</span>
         <button class="task-del" onclick="window.deleteTask(${i})">×</button>
       </div>
-    `).join('');
+    `).join(''));
   }
 
   // Render Pinned Tasks
   const pinnedList = byId('pinned-list');
   if (pinnedList) {
-    pinnedList.innerHTML = (state.pinnedTasks || []).map(t => `
+    updateHTML(pinnedList, (state.pinnedTasks || []).map(t => `
       <div class="task-row pinned">
         <input type="checkbox" ${day.pinnedDone?.[t.id] ? 'checked' : ''} onchange="window.togglePinnedTask('${t.id}')">
         <span class="task-text ${day.pinnedDone?.[t.id] ? 'done' : ''}">${esc(t.text)}</span>
         <button class="task-del" onclick="window.deletePinnedTask('${t.id}')">×</button>
       </div>
-    `).join('');
+    `).join(''));
   }
 
   // Render Habits
   const habitsList = byId('habits-list');
   if (habitsList) {
-    habitsList.innerHTML = (state.habits || []).map(h => `
+    updateHTML(habitsList, (state.habits || []).map(h => `
       <div class="habit-item ${day.habits?.[h.id] ? 'done' : ''}" onclick="window.toggleHabit('${h.id}')">
         <div class="habit-icon">${h.icon}</div>
         <div class="habit-label">${esc(h.label)}</div>
       </div>
-    `).join('');
+    `).join(''));
   }
 
   // Update Score Strip
@@ -112,14 +118,6 @@ function updateScoreStrip(day) {
   if (scH) scH.textContent = `${hDone}/${habits.length}`;
 }
 
-function esc(str) {
-  if (!str) return '';
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
 
 export function showToast(message) {
   const toast = ensureToastEl();
