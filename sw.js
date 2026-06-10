@@ -1,7 +1,7 @@
 // Daily Tracker — Service Worker
 // Cache-first strategy for app shell, network-first for sync
 
-const CACHE_NAME = 'daily-tracker-v3';
+const CACHE_NAME = 'daily-tracker-v4';
 
 const APP_SHELL = [
   '/',
