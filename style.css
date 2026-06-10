@@ -22,9 +22,9 @@
   --green:     #166534;
   --score-bg:  #18160f;
   --score-fg:  #ffffff;
-  --pin:       #fdf6e3;
-  --pin-border:#e8d9a0;
-  --pin-text:  #7a6520;
+  --pin:       transparent;
+  --pin-border:var(--border);
+  --pin-text:  var(--text2);
   --r:         14px;
 
   /* type scale — mobile first */
@@ -65,9 +65,9 @@
   --green:     #4ade80;
   --score-bg:  #f0ead8;
   --score-fg:  #111008;
-  --pin:       #1e1c0e;
-  --pin-border:#3d3820;
-  --pin-text:  #c9a84c;
+  --pin:       transparent;
+  --pin-border:var(--border);
+  --pin-text:  var(--text2);
   --blue: #60a5fa;
   --blue-border: #3b82f6;
   --red: #f87171;
@@ -159,7 +159,7 @@ body {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 20px;
-  font-family: 'DM Mono', monospace;
+  font-family: inherit;
   font-size: var(--f-xs);
   color: var(--text2);
   opacity: 0;
@@ -175,6 +175,7 @@ body {
 .save-ind.saved  { opacity: 1; color: var(--green); }
 .save-ind.syncing{ opacity: 1; color: var(--blue); }
 .save-ind.synced { opacity: 1; color: var(--green); }
+.save-ind.error  { opacity: 1; color: var(--red); }
 
 .sync-dot {
   width: 6px;
@@ -232,7 +233,7 @@ body {
 }
 
 .today-pill {
-  font-size: 11px;
+  font-size: var(--f-xs);
   background: var(--text);
   color: var(--bg);
   border-radius: 20px;
@@ -246,8 +247,8 @@ body {
 }
 
 .nav-clock {
-  font-family: 'DM Mono', monospace;
-  font-size: 11px;
+  font-family: inherit;
+  font-size: var(--f-xs);
   color: var(--text3);
   letter-spacing: 0.03em;
   white-space: nowrap;
@@ -273,8 +274,6 @@ body {
   gap: 8px;
 }
 
-/* Keep nav-right as alias so JS setView copy-btn display logic still works */
-.nav-right { display: none; }
 
 
 /* ---------- buttons ---------- */
@@ -289,7 +288,7 @@ body {
   align-items: center;
   justify-content: center;
   transition: border-color 0.15s, color 0.15s;
-  font-family: 'DM Sans', sans-serif;
+  font-family: inherit;
   white-space: nowrap;
   -webkit-tap-highlight-color: transparent;
 }
@@ -324,7 +323,6 @@ body {
   .copy-ico { display: none; }
 }
 
-.btn-sync-on { border-color: var(--blue-border); color: var(--blue); }
 
 
 /* ---------- view toggle ---------- */
@@ -346,10 +344,10 @@ body {
   border: none;
   color: var(--text3);
   padding: 0 9px;
-  font-size: 11px;
+  font-size: var(--f-xs);
   font-weight: 500;
   cursor: pointer;
-  font-family: 'DM Sans', sans-serif;
+  font-family: inherit;
   transition: background 0.15s, color 0.15s;
   -webkit-tap-highlight-color: transparent;
 }
@@ -437,7 +435,7 @@ body {
 .field-label {
   display: block;
   margin-bottom: 7px;
-  font-family: 'DM Mono', monospace;
+  font-family: inherit;
   font-size: var(--f-xs);
   font-weight: 600;
   color: var(--text2);
@@ -452,7 +450,7 @@ body {
   border: 1.5px solid var(--border);
   border-radius: 10px;
   color: var(--text);
-  font-family: 'DM Mono', monospace;
+  font-family: inherit;
   font-size: var(--f-sm);
   outline: none;
   transition: border-color 0.15s;
@@ -479,7 +477,7 @@ body {
   color: var(--bg);
   border: none;
   border-radius: 10px;
-  font-family: 'DM Sans', sans-serif;
+  font-family: inherit;
   font-size: var(--f-base);
   font-weight: 500;
   cursor: pointer;
@@ -512,7 +510,7 @@ body {
   padding: 10px 12px;
   margin-bottom: 14px;
   border-radius: 10px;
-  font-family: 'DM Mono', monospace;
+  font-family: inherit;
   font-size: var(--f-sm);
 }
 
@@ -541,48 +539,6 @@ body {
   flex-shrink: 0;
 }
 
-/* setup guide accordion */
-.setup-guide {
-  margin-top: 20px;
-  padding-top: 16px;
-  border-top: 1px solid var(--border);
-}
-
-.setup-guide summary {
-  font-size: var(--f-xs);
-  font-weight: 600;
-  color: var(--text2);
-  cursor: pointer;
-  user-select: none;
-  letter-spacing: 0.04em;
-}
-
-.setup-steps {
-  margin-top: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  font-size: var(--f-xs);
-  color: var(--text3);
-  line-height: 1.65;
-}
-
-.setup-steps a { color: var(--text2); text-decoration: underline; }
-
-.setup-steps pre {
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 9px;
-  padding: 10px 12px;
-  font-family: 'DM Mono', monospace;
-  font-size: 11px;
-  color: var(--text2);
-  white-space: pre-wrap;
-  overflow-x: auto;
-  line-height: 1.7;
-}
-
-
 /* ============================================================
    Score strip
    ============================================================ */
@@ -604,7 +560,7 @@ body {
 @media (min-width: 1024px) { .score-strip { padding: 22px var(--cp); } }
 
 .score-pct {
-  font-family: 'DM Mono', monospace;
+  font-family: inherit;
   font-size: var(--f-xl);
   font-weight: 500;
   line-height: 1;
@@ -612,7 +568,7 @@ body {
 
 .score-lbl {
   margin-top: 3px;
-  font-size: 11px;
+  font-size: var(--f-xs);
   opacity: 0.6;
   text-transform: uppercase;
   letter-spacing: 0.1em;
@@ -631,7 +587,7 @@ body {
 .sc-stat { text-align: center; }
 
 .sc-val {
-  font-family: 'DM Mono', monospace;
+  font-family: inherit;
   font-size: 15px;
   font-weight: 500;
   line-height: 1;
@@ -641,13 +597,11 @@ body {
 
 .sc-key {
   margin-top: 3px;
-  font-size: 11px;
+  font-size: var(--f-xs);
   opacity: 0.55;
   text-transform: uppercase;
   letter-spacing: 0.07em;
 }
-
-@media (min-width: 600px) { .sc-key { font-size: 11px; } }
 
 
 /* ============================================================
@@ -680,7 +634,7 @@ body {
   display: flex;
   align-items: center;
   gap: 7px;
-  font-size: 10px;
+  font-size: var(--f-xs);
   font-weight: 600;
   color: var(--text2);
   text-transform: uppercase;
@@ -724,8 +678,8 @@ body {
 }
 
 .sleep-lbl {
-  font-family: 'DM Mono', monospace;
-  font-size: 10px;
+  font-family: inherit;
+  font-size: var(--f-xs);
   color: var(--text3);
   text-transform: uppercase;
   letter-spacing: 0.07em;
@@ -737,7 +691,7 @@ body {
   background: none;
   border: none;
   outline: none;
-  font-family: 'DM Mono', monospace;
+  font-family: inherit;
   font-size: var(--f-md);
   font-weight: 500;
   color: var(--text);
@@ -754,7 +708,7 @@ body {
 .sleep-dur {
   display: none;
   padding: 0 var(--cp) 11px;
-  font-family: 'DM Mono', monospace;
+  font-family: inherit;
   font-size: var(--f-xs);
   color: var(--text2);
   line-height: 1.4;
@@ -776,8 +730,8 @@ body {
 .goal-label {
   display: block;
   margin-bottom: 6px;
-  font-family: 'DM Mono', monospace;
-  font-size: 10px;
+  font-family: inherit;
+  font-size: var(--f-xs);
   color: var(--text3);
   text-transform: uppercase;
   letter-spacing: 0.07em;
@@ -790,7 +744,7 @@ body {
   background: none;
   border: none;
   outline: none;
-  font-family: 'DM Sans', sans-serif;
+  font-family: inherit;
   font-size: var(--f-md);
   font-weight: 600;
   color: var(--text);
@@ -807,7 +761,6 @@ body {
 
 .pinned-section {
   background: var(--pin);
-  border-bottom: 1px solid var(--pin-border);
 }
 
 .pinned-label {
@@ -815,8 +768,8 @@ body {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-family: 'DM Mono', monospace;
-  font-size: 10px;
+  font-family: inherit;
+  font-size: var(--f-xs);
   color: var(--pin-text);
   text-transform: uppercase;
   letter-spacing: 0.07em;
@@ -850,7 +803,7 @@ body {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  font-size: 11px;
+  font-size: var(--f-xs);
   color: transparent;
   user-select: none;
   transition: all 0.18s;
@@ -878,7 +831,7 @@ body {
   padding: 2px 7px;
   background: var(--pin-border);
   border-radius: 20px;
-  font-size: 10px;
+  font-size: var(--f-xs);
   font-weight: 500;
   color: var(--pin-text);
   flex-shrink: 0;
@@ -910,8 +863,7 @@ body {
   display: flex;
   align-items: center;
   gap: 9px;
-  padding: 9px var(--cp) 12px;
-  border-top: 1px solid var(--pin-border);
+  padding: 0 var(--cp) 12px;
 }
 
 .add-pin-inp {
@@ -920,7 +872,7 @@ body {
   background: none;
   border: none;
   outline: none;
-  font-family: 'DM Sans', sans-serif;
+  font-family: inherit;
   font-size: var(--f-base);
   color: var(--pin-text);
   padding: 0;
@@ -978,7 +930,7 @@ body {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  font-size: 11px;
+  font-size: var(--f-xs);
   color: transparent;
   user-select: none;
   transition: all 0.18s;
@@ -999,7 +951,7 @@ body {
   background: none;
   border: none;
   outline: none;
-  font-family: 'DM Sans', sans-serif;
+  font-family: inherit;
   font-size: var(--f-base);
   color: var(--text);
   padding: 0;
@@ -1035,7 +987,6 @@ body {
   gap: 9px;
   padding: 9px var(--cp) 12px;
   margin-top: 2px;
-  border-top: 1px solid var(--border);
 }
 
 @media (min-width: 600px) { .add-task-row { padding: 10px var(--cp) 14px; } }
@@ -1046,7 +997,7 @@ body {
   background: none;
   border: none;
   outline: none;
-  font-family: 'DM Sans', sans-serif;
+  font-family: inherit;
   font-size: var(--f-base);
   color: var(--text);
   padding: 0;
@@ -1093,7 +1044,7 @@ body {
 .meal-lbl {
   min-width: 68px;
   flex-shrink: 0;
-  font-family: 'DM Mono', monospace;
+  font-family: inherit;
   font-size: var(--f-xs);
   color: var(--text3);
 }
@@ -1107,7 +1058,7 @@ body {
   border: none;
   border-bottom: 1.5px solid var(--border);
   outline: none;
-  font-family: 'DM Sans', sans-serif;
+  font-family: inherit;
   font-size: var(--f-base);
   color: var(--text);
   padding: 3px 0;
@@ -1156,7 +1107,7 @@ body {
 
 .streak {
   flex-shrink: 0;
-  font-family: 'DM Mono', monospace;
+  font-family: inherit;
   font-size: var(--f-xs);
   color: var(--text3);
 }
@@ -1188,7 +1139,6 @@ body {
   align-items: center;
   gap: 9px;
   padding: 9px var(--cp) 12px;
-  border-top: 1px solid var(--border);
 }
 
 @media (min-width: 600px) { .add-habit-row { padding: 10px var(--cp) 14px; } }
@@ -1218,7 +1168,7 @@ body {
   background: none;
   border: none;
   outline: none;
-  font-family: 'DM Sans', sans-serif;
+  font-family: inherit;
   font-size: var(--f-base);
   color: var(--text);
   padding: 0;
@@ -1306,7 +1256,7 @@ body {
   background: none;
   border: none;
   outline: none;
-  font-family: 'DM Sans', sans-serif;
+  font-family: inherit;
   font-size: var(--f-base);
   color: var(--text);
   line-height: 1.75;
@@ -1335,8 +1285,8 @@ body {
 .eod-lbl {
   display: block;
   margin-bottom: 7px;
-  font-family: 'DM Mono', monospace;
-  font-size: 10px;
+  font-family: inherit;
+  font-size: var(--f-xs);
   color: var(--text3);
   text-transform: uppercase;
   letter-spacing: 0.07em;
@@ -1350,7 +1300,7 @@ body {
   border: none;
   border-bottom: 2px solid var(--border);
   outline: none;
-  font-family: 'DM Sans', sans-serif;
+  font-family: inherit;
   font-size: var(--f-base);
   color: var(--text);
   padding: 5px 0;
@@ -1414,7 +1364,7 @@ body {
 .week-day-card.selected-card { background: var(--text); border-color: var(--text); }
 
 .wdc-dow {
-  font-size: 11px;
+  font-size: var(--f-xs);
   font-weight: 600;
   color: var(--text3);
   text-transform: uppercase;
@@ -1428,7 +1378,7 @@ body {
 .week-day-card.selected-card .wdc-dow { color: var(--bg); opacity: 0.6; }
 
 .wdc-date {
-  font-family: 'DM Mono', monospace;
+  font-family: inherit;
   font-size: 14px;
   font-weight: 500;
   line-height: 1.1;
@@ -1441,8 +1391,8 @@ body {
 .week-day-card.selected-card .wdc-date { color: var(--bg); }
 
 .wdc-score {
-  font-family: 'DM Mono', monospace;
-  font-size: 11px;
+  font-family: inherit;
+  font-size: var(--f-xs);
   font-weight: 500;
   color: var(--text2);
   margin-bottom: 4px;
@@ -1489,7 +1439,7 @@ body {
 @media (min-width: 600px) { .week-summary { padding: 17px var(--cp); margin-bottom: 11px; } }
 
 .ws-val {
-  font-family: 'DM Mono', monospace;
+  font-family: inherit;
   font-size: var(--f-lg);
   font-weight: 500;
   line-height: 1;
@@ -1497,7 +1447,7 @@ body {
 }
 
 .ws-key {
-  font-size: 10px;
+  font-size: var(--f-xs);
   color: var(--text3);
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -1528,8 +1478,8 @@ body {
 
 .hwt-head {
   border-bottom: 1px solid var(--border);
-  font-family: 'DM Mono', monospace;
-  font-size: 11px;
+  font-family: inherit;
+  font-size: var(--f-xs);
   color: var(--text3);
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -1575,7 +1525,7 @@ body {
 .hwt-dot.done { background: var(--text); color: var(--bg); }
 
 .hwt-streak {
-  font-family: 'DM Mono', monospace;
+  font-family: inherit;
   font-size: var(--f-xs);
   color: var(--text2);
   text-align: right;
@@ -1588,7 +1538,7 @@ body {
 
 .trend-stat-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 7px;
   margin-bottom: 7px;
 }
@@ -1606,7 +1556,7 @@ body {
 @media (min-width: 600px) { .trend-stat { padding: 15px var(--cp); } }
 
 .ts-val {
-  font-family: 'DM Mono', monospace;
+  font-family: inherit;
   font-size: var(--f-xl);
   font-weight: 500;
   line-height: 1;
@@ -1614,7 +1564,7 @@ body {
 }
 
 .ts-key {
-  font-size: 10px;
+  font-size: var(--f-xs);
   color: var(--text3);
   text-transform: uppercase;
   letter-spacing: 0.07em;
@@ -1629,7 +1579,7 @@ body {
   margin-bottom: 7px;
 }
 
-@media (min-width: 560px) { .trends-grid { grid-template-columns: 1fr 1fr; } }
+@media (min-width: 560px) { .trends-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (min-width: 600px) { .trends-grid { gap: 9px; margin-bottom: 9px; } }
 
 .chart-card {
@@ -1638,6 +1588,7 @@ body {
   border: 1.5px solid var(--border);
   border-radius: var(--r);
   animation: up 0.3s ease both;
+  min-width: 0;
 }
 
 @media (min-width: 600px) { .chart-card { padding: 15px var(--cp); } }
@@ -1647,7 +1598,7 @@ body {
 
 .chart-lbl {
   margin-bottom: 12px;
-  font-size: 10px;
+  font-size: var(--f-xs);
   font-weight: 600;
   color: var(--text2);
   text-transform: uppercase;
@@ -1679,7 +1630,7 @@ body {
 
 .reminder-sub {
   margin-top: 2px;
-  font-family: 'DM Mono', monospace;
+  font-family: inherit;
   font-size: var(--f-xs);
   color: var(--text3);
 }
@@ -1698,7 +1649,7 @@ body {
   border: 1.5px solid var(--border);
   border-radius: 7px;
   color: var(--text);
-  font-family: 'DM Mono', monospace;
+  font-family: inherit;
   font-size: var(--f-sm);
   outline: none;
   transition: border-color 0.15s;
@@ -1748,7 +1699,7 @@ body {
 
 .notif-status {
   margin-top: 8px;
-  font-family: 'DM Mono', monospace;
+  font-family: inherit;
   font-size: var(--f-xs);
   color: var(--text3);
 }
@@ -1807,7 +1758,7 @@ body {
 .auth-back-btn:hover { color: var(--text); }
 
 .auth-msg {
-  font-family: 'DM Mono', monospace;
+  font-family: inherit;
   font-size: var(--f-xs);
   color: var(--text3);
   min-height: 16px;
@@ -1837,7 +1788,7 @@ body {
   border: none;
   color: var(--text3);
   font-size: var(--f-xs);
-  font-family: 'DM Sans', sans-serif;
+  font-family: inherit;
   cursor: pointer;
   padding: 0;
   text-decoration: underline;
@@ -1848,7 +1799,7 @@ body {
 .auth-link:hover { color: var(--text2); }
 
 .account-email {
-  font-family: 'DM Mono', monospace;
+  font-family: inherit;
   font-size: var(--f-sm);
   font-weight: 500;
   color: var(--text);
@@ -1912,7 +1863,7 @@ body {
 }
 
 .wr-range {
-  font-family: 'DM Mono', monospace;
+  font-family: inherit;
   font-size: var(--f-xs);
   color: var(--text3);
 }
@@ -1942,7 +1893,7 @@ body {
   border: none;
   outline: none;
   resize: none;
-  font-family: 'DM Sans', sans-serif;
+  font-family: inherit;
   font-size: var(--f-base);
   color: var(--text);
   line-height: 1.5;
@@ -1961,25 +1912,30 @@ body {
   overflow-x: auto;
 }
 
+#heatmap-container {
+  margin: 0 auto;
+  width: max-content;
+}
+
 .hm-months {
   display: flex;
-  gap: 2px;
   margin-bottom: 4px;
-  padding-left: 18px;
+  padding-left: 12px;
 }
 
 .hm-month {
-  font-size: 11px;
+  font-size: var(--f-xs);
   color: var(--text3);
-  width: 14px;
+  width: 11px;
   flex-shrink: 0;
   text-align: left;
-  font-family: 'DM Mono', monospace;
+  font-family: inherit;
+  overflow: visible;
 }
 
 .hm-body {
   display: flex;
-  gap: 4px;
+  gap: 2px;
   align-items: flex-start;
 }
 
@@ -1991,11 +1947,11 @@ body {
 }
 
 .hm-dow-lbl {
-  font-size: 11px;
+  font-size: var(--f-xs);
   color: var(--text3);
-  height: 12px;
-  line-height: 12px;
-  font-family: 'DM Mono', monospace;
+  height: 9px;
+  line-height: 9px;
+  font-family: inherit;
   width: 10px;
 }
 
@@ -2011,8 +1967,8 @@ body {
 }
 
 .hm-cell {
-  width: 12px;
-  height: 12px;
+  width: 9px;
+  height: 9px;
   border-radius: 2px;
   cursor: pointer;
   transition: opacity 0.1s;
@@ -2038,9 +1994,9 @@ body {
 }
 
 .hm-leg-lbl {
-  font-size: 11px;
+  font-size: var(--f-xs);
   color: var(--text3);
-  font-family: 'DM Mono', monospace;
+  font-family: inherit;
   margin: 0 2px;
 }
 

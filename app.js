@@ -268,6 +268,33 @@ function bindEvents() {
     updateReminder('evening', { enabled: e.target.checked });
   });
 
+  // Wire up state fields (slept, woke, goal, meals, notes, eod)
+  const bindInput = (id, stateKey, subKey) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('change', e => {
+      const d = getDay(state.db, state.currentDay);
+      if (subKey) {
+        if (!d[stateKey]) d[stateKey] = {};
+        d[stateKey][subKey] = e.target.value;
+      } else {
+        d[stateKey] = e.target.value;
+      }
+      setState('db', state.db);
+      touch();
+    });
+  };
+  bindInput('slept', 'slept');
+  bindInput('woke', 'woke');
+  bindInput('main-goal', 'goal');
+  bindInput('m-breakfast', 'meals', 'breakfast');
+  bindInput('m-lunch', 'meals', 'lunch');
+  bindInput('m-dinner', 'meals', 'dinner');
+  bindInput('m-snacks', 'meals', 'snacks');
+  bindInput('notes-ta', 'notes');
+  bindInput('eod-win', 'win');
+  bindInput('eod-tmr', 'tmr');
+
   // Window bridge for ui.js HTML handlers
   window.toggleTask = toggleTask;
   window.editTask = editTask;
@@ -276,6 +303,12 @@ function bindEvents() {
   window.deleteHabit = deleteHabit;
   window.togglePinnedTask = togglePinnedTask;
   window.deletePinnedTask = deletePinnedTask;
+  window.navToDay = (dateStr) => {
+    state.currentDay = dateStr;
+    setState('currentDay', state.currentDay);
+    import('./ui.js').then(m => m.setView('day'));
+  };
+  window.triggerSave = touch;
 }
 
 function toggleTask(i) {
@@ -350,7 +383,7 @@ async function handleSignIn() {
   const passInp = document.getElementById('si-pass');
   const btn = document.getElementById('si-submit');
   
-  if (!emailInp.value || !passInp.value) return showToast('Email and password required');
+  if (!emailInp.value || !passInp.value) return showToast('Please fill in all required fields.');
   
   const originalText = btn.textContent;
   btn.textContent = 'Signing In...';
@@ -396,7 +429,7 @@ async function handleRegister() {
   const confirmInp = document.getElementById('reg-pass-confirm');
   const btn = document.getElementById('reg-submit');
   
-  if (!emailInp.value || !passInp.value || !confirmInp.value) return showToast('All fields required');
+  if (!emailInp.value || !passInp.value || !confirmInp.value) return showToast('Please fill in all required fields.');
   
   const originalText = btn.textContent;
   btn.textContent = 'Creating Account...';

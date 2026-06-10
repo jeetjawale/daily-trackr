@@ -1,13 +1,7 @@
 // state.js - Centralized state management
 import { todayStr } from './utils.js';
 
-const DEFAULT_HABITS = [
-  { id: 'study',   icon: '📚', label: 'Studied' },
-  { id: 'workout', icon: '💪', label: 'Worked out' },
-  { id: 'walk',    icon: '🚶', label: 'Walked' },
-  { id: 'water',   icon: '💧', label: 'Drank enough water' },
-  { id: 'sleep',   icon: '😴', label: 'Slept okay' },
-];
+const DEFAULT_HABITS = [];
 
 const DEFAULT_REMINDERS = [
   { id: 'morning', enabled: false, time: '08:00' },
