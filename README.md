@@ -65,17 +65,17 @@ The app is a single‑page web application written in vanilla HTML, CSS, and mod
 ```mermaid
 flowchart TD
     subgraph Browser
-        UI[UI (HTML/CSS/JS)]
-        LS[LocalStorage]
+        UI["UI (HTML/CSS/JS)"]
+        LS["LocalStorage"]
     end
 
     subgraph Supabase
-        Auth[Supabase Auth]
-        DB[Postgres DB]
+        Auth["Supabase Auth"]
+        DB["Postgres DB"]
     end
 
     UI -->|Saves data| LS
-    UI -->|Sync (if signed in)| Auth
+    UI -->|Sync if signed in| Auth
     Auth -->|CRUD| DB
     DB -->|Sync data| UI
 ```
