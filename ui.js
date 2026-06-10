@@ -56,8 +56,8 @@ export function render() {
   if (tasksList) {
     updateHTML(tasksList, (day.tasks || []).map((t, i) => `
       <div class="task-row">
-        <input type="checkbox" ${t.done ? 'checked' : ''} onchange="window.toggleTask(${i})">
-        <span class="task-text ${t.done ? 'done' : ''}">${esc(t.text)}</span>
+        <div class="chk ${t.done ? 'on' : ''}" onclick="window.toggleTask(${i})">✓</div>
+        <input type="text" class="task-inp ${t.done ? 'done' : ''}" value="${esc(t.text)}" onchange="window.editTask(${i}, this.value)">
         <button class="task-del" onclick="window.deleteTask(${i})">×</button>
       </div>
     `).join(''));
@@ -67,10 +67,10 @@ export function render() {
   const pinnedList = byId('pinned-list');
   if (pinnedList) {
     updateHTML(pinnedList, (state.pinnedTasks || []).map(t => `
-      <div class="task-row pinned">
-        <input type="checkbox" ${day.pinnedDone?.[t.id] ? 'checked' : ''} onchange="window.togglePinnedTask('${t.id}')">
-        <span class="task-text ${day.pinnedDone?.[t.id] ? 'done' : ''}">${esc(t.text)}</span>
-        <button class="task-del" onclick="window.deletePinnedTask('${t.id}')">×</button>
+      <div class="pinned-row">
+        <div class="pin-chk ${day.pinnedDone?.[t.id] ? 'on' : ''}" onclick="window.togglePinnedTask('${t.id}')">✓</div>
+        <div class="pin-txt ${day.pinnedDone?.[t.id] ? 'done' : ''}">${esc(t.text)}</div>
+        <button class="pin-del" onclick="window.deletePinnedTask('${t.id}')">×</button>
       </div>
     `).join(''));
   }
@@ -79,9 +79,10 @@ export function render() {
   const habitsList = byId('habits-list');
   if (habitsList) {
     updateHTML(habitsList, (state.habits || []).map(h => `
-      <div class="habit-item ${day.habits?.[h.id] ? 'done' : ''}" onclick="window.toggleHabit('${h.id}')">
-        <div class="habit-icon">${h.icon}</div>
-        <div class="habit-label">${esc(h.label)}</div>
+      <div class="habit-row" onclick="window.toggleHabit('${h.id}')">
+        <div class="h-ico">${h.icon}</div>
+        <div class="h-lbl ${day.habits?.[h.id] ? 'on' : ''}">${esc(h.label)}</div>
+        <button class="habit-del" onclick="event.stopPropagation(); window.deleteHabit('${h.id}')">×</button>
       </div>
     `).join(''));
   }

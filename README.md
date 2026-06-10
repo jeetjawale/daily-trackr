@@ -1,6 +1,6 @@
 # Daily Tracker
 
-A lightweight, zero-dependency personal productivity tracker that runs entirely in the browser. Track habits, tasks, sleep, meals, and daily reflections — with Supabase sync scaffolding currently being wired in.
+A lightweight, zero-dependency personal productivity tracker that runs entirely in the browser. Track habits, tasks, sleep, meals, and daily reflections — now with live Supabase cloud sync and local-first guest mode.
 
 ![version](https://img.shields.io/badge/version-2.0.0-blue) ![license](https://img.shields.io/badge/license-MIT-green) ![netlify](https://img.shields.io/badge/build-netlify-brightgreen)
 
@@ -31,10 +31,10 @@ A lightweight, zero-dependency personal productivity tracker that runs entirely 
 
 **Other**
 - 🌗 Dark / light mode (auto-detects system preference on first visit)
-- ☁️ Supabase sync scaffolding — schema, client helper, and browser config are in place; live auth/sync wiring is still in progress
-- 🔔 Browser notification UI is present; reminder scheduling is not fully wired in this intermediate build
+- ☁️ Live Supabase cloud sync — full user authentication and automatic data sync across devices
+- 🔔 Browser notifications — daily reminders fully implemented and accurately scheduled
 - ⟳ Copy yesterday's tasks and goal to today in one click
-- 💾 Auto-save to `localStorage` with a visible save/sync indicator
+- 💾 Auto-save to `localStorage` with a visible save/sync indicator and background cloud upserts
 
 ---
 
@@ -66,7 +66,7 @@ npx serve .
 python -m http.server 8080
 ```
 
-Without `supabase-config.js`, the app works fully offline. In this intermediate build, live sync is not active yet.
+Without `supabase-config.js`, the app works fully offline in a local guest mode.
 
 ---
 
@@ -88,7 +88,7 @@ daily-tracker/
 
 ## Sync Setup (one-time, for the developer)
 
-This task only adds the Supabase schema and browser configuration contract. Live auth and cloud sync behavior are not fully wired yet.
+Live auth and cloud sync behavior are fully wired. To set it up on your own fork:
 
 ### 1. Create a Supabase project
 
@@ -104,19 +104,19 @@ This task only adds the Supabase schema and browser configuration contract. Live
 git push
 ```
 
-Netlify serves the app as static files. If you want to continue wiring cloud sync in later tasks, make sure the deployed site includes a real `supabase-config.js`. The anon key is intended for browser use; do not use a service role key.
+Netlify serves the app as static files. The deployed site will automatically fetch your actual database config via environment variables or a deployed `supabase-config.js`. The anon key is intended for browser use; do not use a service role key.
 
 ---
 
 ## Browser Notifications
 
-The notification controls are present in the UI, but reminder scheduling is not fully implemented in this intermediate build.
+The app supports scheduled browser notifications for morning check-ins and evening reflections. Ensure you grant notification permissions when prompted.
 
 ---
 
 ## Data Storage
 
-All data is saved to `localStorage` under the key `dt-v7`. In this intermediate build, day-to-day usage is still local-first. To back up: DevTools → Application → Local Storage → copy the value.
+For guest users, all data is saved to `localStorage` under isolated keys. When signed in, data syncs to the Supabase Postgres database. You can seamlessly import guest data to your account on sign-up!
 
 ---
 

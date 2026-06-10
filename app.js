@@ -270,8 +270,10 @@ function bindEvents() {
 
   // Window bridge for ui.js HTML handlers
   window.toggleTask = toggleTask;
+  window.editTask = editTask;
   window.deleteTask = deleteTask;
   window.toggleHabit = toggleHabit;
+  window.deleteHabit = deleteHabit;
   window.togglePinnedTask = togglePinnedTask;
   window.deletePinnedTask = deletePinnedTask;
 }
@@ -281,6 +283,15 @@ function toggleTask(i) {
   d.tasks[i].done = !d.tasks[i].done;
   setState('db', state.db);
   touch();
+}
+
+function editTask(i, newText) {
+  const d = getDay(state.db, state.currentDay);
+  if (d.tasks[i]) {
+    d.tasks[i].text = newText;
+    setState('db', state.db);
+    touch();
+  }
 }
 
 function deleteTask(i) {
@@ -296,6 +307,15 @@ function toggleHabit(id) {
   d.habits[id] = !d.habits[id];
   setState('db', state.db);
   touch();
+}
+
+function deleteHabit(id) {
+  const idx = state.habits.findIndex(h => h.id === id);
+  if (idx > -1) {
+    state.habits.splice(idx, 1);
+    setState('habits', state.habits);
+    touch();
+  }
 }
 
 function togglePinnedTask(id) {
