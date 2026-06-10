@@ -58,9 +58,13 @@ The app is a single‑page web application written in vanilla HTML, CSS, and mod
 ---
 ## Screenshots
 
-![Day view screenshot](assets/day-view.png)
-
-![Add task demo (GIF)](assets/add-task-demo.gif)
+<p align="center">
+  <img src="assets/day-view.png" width="48%" alt="Day View" />
+  <img src="assets/trends-view.png" width="48%" alt="Trends View" />
+  
+  <br>
+  <img src="assets/week-view.png" width="48%" alt="Week View" />
+</p>
 
 ```mermaid
 flowchart TD

@@ -59,6 +59,31 @@ export function render() {
   };
   setVal('slept', day.slept);
   setVal('woke', day.woke);
+  
+  const sleepDurEl = byId('sleep-dur');
+  if (sleepDurEl) {
+    if (day.slept && day.woke) {
+      const s = parseFuzzyTime(day.slept);
+      const w = parseFuzzyTime(day.woke);
+      if (s !== null && w !== null) {
+        let mins = w - s;
+        if (mins < 0) mins += 1440;
+        const h = Math.floor(mins / 60);
+        const m = mins % 60;
+        let quality = 'Good';
+        let color = '#22c55e'; // green
+        if (mins < 300) { quality = 'Poor'; color = '#ef4444'; }
+        else if (mins < 420) { quality = 'Fair'; color = '#f59e0b'; }
+        
+        sleepDurEl.innerHTML = `${h}h ${m}m <span style="margin-left:8px; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; color: #fff; background: ${color}">${quality}</span>`;
+      } else {
+        sleepDurEl.innerHTML = '';
+      }
+    } else {
+      sleepDurEl.innerHTML = '';
+    }
+  }
+
   setVal('main-goal', day.goal);
   setVal('m-breakfast', day.meals?.breakfast);
   setVal('m-lunch', day.meals?.lunch);
